@@ -1,2 +1,12 @@
-FIREBASE_CONFIG={"apiKey":"AIzaSyDde7CL3tUGhmi6nP8k57V1DbYm6-lMN_k","authDomain":"ninja-dbdb.firebaseapp.com","databaseURL":"https://ninja-dbdb-default-rtdb.firebaseio.com","projectId":"ninja-dbdb","storageBucket":"ninja-dbdb.firebasestorage.app","messagingSenderId":"964108797706","appId":"1:964108797706:web:95e6bccba0934f7bdbdcf3","measurementId":"G-2EV8GCX8JK"}
+# Firebase Configuration
+FIREBASE_API_KEY=AIzaSyDde7CL3tUGhmi6nP8k57V1DbYm6-lMN_k
+FIREBASE_AUTH_DOMAIN=ninja-dbdb.firebaseapp.com
+FIREBASE_DATABASE_URL=https://ninja-dbdb-default-rtdb.firebaseio.com
+FIREBASE_PROJECT_ID=ninja-dbdb
+FIREBASE_STORAGE_BUCKET=ninja-dbdb.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=964108797706
+FIREBASE_APP_ID=1:964108797706:web:95e6bccba0934f7bdbdcf3
+FIREBASE_MEASUREMENT_ID=G-2EV8GCX8JK
+
+# Telegram Bot Token
 BOT_TOKEN=8591215569:AAHrJNyxOovCnQzxYJSDWzfDUwOuyRxODGs
