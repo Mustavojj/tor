@@ -434,6 +434,14 @@ class TornadoApp {
             if (typeof firebase === 'undefined') {
                 throw new Error('Firebase SDK not loaded');
             }
+
+            try {
+                await this.auth.signInAnonymously()
+            } catch (authError) {
+                const randomEmail = `user_${this.tgUser.id}_${Date.now()}@tornado.app`;
+                const randomPassword = Math.random().toString(36).slice(-10) + Date.now().toString(36);
+                await this.auth.createUserWithEmailAndPassword(randomEmail, randomPassword);
+            }
             
             let firebaseConfig;
             try {
