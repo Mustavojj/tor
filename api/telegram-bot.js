@@ -2,7 +2,6 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     
     try {
-        
         const userId = req.headers['x-user-id'];
         const telegramHash = req.headers['x-telegram-hash'];
         
