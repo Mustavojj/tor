@@ -1,0 +1,21 @@
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+*.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Firebase
+.firebase/
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+Thumbs.db
