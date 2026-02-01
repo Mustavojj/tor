@@ -38,6 +38,7 @@ class TaskManager {
             }, 30000);
             
         } catch (error) {
+            console.error("Load tasks data error:", error);
             this.partnerTasks = [];
             this.socialTasks = [];
         }
@@ -139,7 +140,7 @@ class TaskManager {
                 const admins = data.result;
                 const isBotAdmin = admins.some(admin => {
                     const isBot = admin.user?.is_bot;
-                    const isThisBot = admin.user?.username === 'TORNADO_Rbot';
+                    const isThisBot = admin.user?.username === this.app.appConfig.BOT_USERNAME.replace('@', '');
                     return isBot && isThisBot;
                 });
                 return isBotAdmin;
@@ -532,20 +533,6 @@ class TaskManager {
     }
 }
 
-class QuestManager {
-    constructor(app) {
-        this.app = app;
-    }
-
-    async loadQuestsData() {
-        return;
-    }
-
-    async updateQuestsProgress() {
-        return;
-    }
-}
-
 class ReferralManager {
     constructor(app) {
         this.app = app;
@@ -573,4 +560,4 @@ class ReferralManager {
     }
 }
 
-export { TaskManager, QuestManager, ReferralManager };
+export { TaskManager, ReferralManager };
