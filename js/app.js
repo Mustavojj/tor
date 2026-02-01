@@ -1,18 +1,15 @@
 const APP_CONFIG = {
-    APP_NAME: "TORNADO",
-    BOT_USERNAME: "TORNADO_Rbot",
+    APP_NAME: "Tornado TON",
+    BOT_USERNAME: "Tornado_Rbot",
+    BOT_TOKEN: "YOUR_BOT_TOKEN_HERE",
     MINIMUM_WITHDRAW: 0.10,
     REFERRAL_BONUS_TON: 0.001,
     REFERRAL_PERCENTAGE: 20,
-    REFERRAL_BONUS_TASKS: 0,
-    TASK_REWARD_BONUS: 0,
-    MAX_DAILY_ADS: 999999,
-    AD_COOLDOWN: 600000,
     WELCOME_TASKS: [
         {
             name: "Join Official Channel",
-            url: "https://t.me/TORNADO_Channel",
-            channel: "@TORNADO_Channel"
+            url: "https://t.me/Tornado_Channel",
+            channel: "@Tornado_Channel"
         },
         {
             name: "Join Partner 1",
@@ -24,11 +21,33 @@ const APP_CONFIG = {
             url: "https://t.me/Crypto_al2",
             channel: "@Crypto_al2"
         }
-    ]
+    ],
+    WELCOME_MESSAGE: {
+        text: "⚡ Welcome to Tornado!",
+        photo: "https://i.ibb.co/GvWFRrnp/ninja.png",
+        buttons: [
+            {
+                text: "Start App 💎",
+                url: "https://t.me/Tornado_Rbot/start"
+            },
+            {
+                text: "Get News 📰",
+                url: "https://t.me/Tornado_Channel"
+            }
+        ]
+    },
+    TASK_PRICES: {
+        100: 0.100,
+        250: 0.250,
+        500: 0.500,
+        1000: 1.000,
+        2500: 2.500,
+        5000: 5.000
+    }
 };
 
 import { CacheManager, NotificationManager, SecurityManager, AdManager } from './modules/core.js';
-import { TaskManager, QuestManager, ReferralManager } from './modules/features.js';
+import { TaskManager, ReferralManager } from './modules/features.js';
 
 class TornadoApp {
     
@@ -56,10 +75,9 @@ class TornadoApp {
         };
         
         this.pages = [
-            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#1e40af' },
-            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#1e40af' },
-            { id: 'withdraw-page', name: 'Withdraw', icon: 'fa-wallet', color: '#1e40af' },
-            { id: 'profile-page', name: 'Profile', icon: 'fa-user', color: '#1e40af' }
+            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#3b82f6' },
+            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#3b82f6' },
+            { id: 'profile-page', name: 'Profile', icon: 'fa-user', color: '#3b82f6' }
         ];
         
         this.cache = new CacheManager();
@@ -71,7 +89,6 @@ class TornadoApp {
         this.tgUser = null;
         
         this.taskManager = null;
-        this.questManager = null;
         this.referralManager = null;
         
         this.currentTasksTab = 'main';
@@ -91,10 +108,6 @@ class TornadoApp {
         
         this.welcomeTasksShown = false;
         this.welcomeTasksCompleted = false;
-        this.welcomeTasksVerified = {
-            newsChannel: false,
-            group: false
-        };
         
         this.remoteConfig = null;
         this.configCache = null;
@@ -106,14 +119,10 @@ class TornadoApp {
         this.inAppAdsInitialized = false;
         this.inAppAdsTimer = null;
         
-        this.topUsersCache = [];
-        this.lastTopUsersUpdate = 0;
-        this.topUsersUpdateInterval = 3600000;
-        
         this.serverTimeOffset = 0;
         this.timeSyncInterval = null;
         
-        this.welcomeMessageSent = false;
+        this.welcomeMessageSent = new Set();
     }
 
     getRateLimiterClass() {
@@ -147,18 +156,8 @@ class TornadoApp {
                     };
                 }
                 
+                recentRequests.push(now);
                 return { allowed: true };
-            }
-
-            addRequest(userId, action) {
-                const key = `${userId}_${action}`;
-                const now = this.getServerTime();
-                
-                if (!this.requests.has(key)) this.requests.set(key, []);
-                
-                const userRequests = this.requests.get(key);
-                userRequests.push(now);
-                this.requests.set(key, userRequests);
             }
 
             getServerTime() {
@@ -270,7 +269,6 @@ class TornadoApp {
             
             this.adManager = new AdManager(this);
             this.taskManager = new TaskManager(this);
-            this.questManager = new QuestManager(this);
             this.referralManager = new ReferralManager(this);
             
             this.startReferralMonitor();
@@ -280,6 +278,7 @@ class TornadoApp {
             try {
                 await this.loadTasksData();
             } catch (taskError) {
+                console.error("Error loading tasks:", taskError);
             }
             
             this.showLoadingProgress(70);
@@ -287,6 +286,7 @@ class TornadoApp {
             try {
                 await this.loadHistoryData();
             } catch (historyError) {
+                console.error("Error loading history:", historyError);
             }
             
             this.showLoadingProgress(80);
@@ -294,6 +294,7 @@ class TornadoApp {
             try {
                 await this.loadAppStats();
             } catch (statsError) {
+                console.error("Error loading stats:", statsError);
             }
             
             this.showLoadingProgress(85);
@@ -301,10 +302,10 @@ class TornadoApp {
             try {
                 await this.loadAdTimers();
             } catch (adError) {
+                console.error("Error loading ad timers:", adError);
             }
             
             this.showLoadingProgress(90);
-            
             this.renderUI();
             
             this.darkMode = true;
@@ -349,6 +350,7 @@ class TornadoApp {
             }, 500);
             
         } catch (error) {
+            console.error("Initialization error:", error);
             if (this.notificationManager) {
                 this.notificationManager.showNotification(
                     "Initialization Error",
@@ -377,31 +379,65 @@ class TornadoApp {
 
     async sendWelcomeMessage() {
         try {
-            if (this.welcomeMessageSent || !this.tgUser || !this.userState.isNewUser) {
+            if (!this.tgUser || this.welcomeMessageSent.has(this.tgUser.id)) {
                 return;
             }
             
-            const welcomeMessage = `⚡ Welcome to Tornado!\n\nStart your journey with us!`;
+            const isNewUser = await this.isNewUser(this.tgUser.id);
+            if (!isNewUser) {
+                return;
+            }
+            
+            const botToken = this.appConfig.BOT_TOKEN;
+            if (!botToken || botToken === "YOUR_BOT_TOKEN_HERE") {
+                console.log("Bot token not configured");
+                return;
+            }
+            
+            const welcomeConfig = this.appConfig.WELCOME_MESSAGE;
             
             const response = await fetch('/api/send-welcome', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-telegram-user': this.tgUser.id.toString(),
-                    'x-telegram-hash': this.tg?.initData || ''
+                    'x-telegram-auth': this.tg?.initData || ''
                 },
                 body: JSON.stringify({
-                    userId: this.tgUser.id,
-                    userName: this.tgUser.first_name || 'User',
-                    message: welcomeMessage,
-                    photoUrl: this.tgUser.photo_url || null
+                    chat_id: this.tgUser.id,
+                    text: welcomeConfig.text,
+                    photo: welcomeConfig.photo,
+                    buttons: welcomeConfig.buttons
                 })
             });
             
             if (response.ok) {
-                this.welcomeMessageSent = true;
+                this.welcomeMessageSent.add(this.tgUser.id);
+                console.log("Welcome message sent to user:", this.tgUser.id);
             }
+            
         } catch (error) {
+            console.error("Error sending welcome message:", error);
+        }
+    }
+
+    async isNewUser(userId) {
+        try {
+            if (!this.db) return true;
+            
+            const userRef = this.db.ref(`users/${userId}`);
+            const snapshot = await userRef.once('value');
+            
+            if (!snapshot.exists()) {
+                return true;
+            }
+            
+            const userData = snapshot.val();
+            return userData.welcomeMessageSent !== true;
+            
+        } catch (error) {
+            console.error("Error checking if user is new:", error);
+            return true;
         }
     }
 
@@ -420,6 +456,7 @@ class TornadoApp {
                 }, 30000);
             }
         } catch (error) {
+            console.error("Error initializing in-app ads:", error);
         }
     }
     
@@ -433,14 +470,6 @@ class TornadoApp {
         try {
             if (typeof firebase === 'undefined') {
                 throw new Error('Firebase SDK not loaded');
-            }
-
-            try {
-                await this.auth.signInAnonymously()
-            } catch (authError) {
-                const randomEmail = `user_${this.tgUser.id}_${Date.now()}@tornado.app`;
-                const randomPassword = Math.random().toString(36).slice(-10) + Date.now().toString(36);
-                await this.auth.createUserWithEmailAndPassword(randomEmail, randomPassword);
             }
             
             let firebaseConfig;
@@ -516,6 +545,7 @@ class TornadoApp {
             return true;
             
         } catch (error) {
+            console.error("Firebase initialization error:", error);
             this.notificationManager?.showNotification(
                 "Authentication Error",
                 "Failed to connect to database. Some features may not work.",
@@ -541,6 +571,7 @@ class TornadoApp {
                 try {
                     await this.auth.signInAnonymously();
                 } catch (error) {
+                    console.error("Auth error:", error);
                 }
             }
         });
@@ -564,20 +595,19 @@ class TornadoApp {
                     firebaseUid: firebaseUid,
                     telegramId: telegramId,
                     createdAt: this.getServerTime(),
-                    lastSynced: this.getServerTime(),
-                    isNewUser: true
+                    lastSynced: this.getServerTime()
                 };
                 
                 await userRef.set(userData);
             } else {
                 await userRef.update({
                     firebaseUid: firebaseUid,
-                    lastSynced: this.getServerTime(),
-                    isNewUser: false
+                    lastSynced: this.getServerTime()
                 });
             }
             
         } catch (error) {
+            console.error("Sync user with Firebase error:", error);
         }
     }
 
@@ -634,6 +664,7 @@ class TornadoApp {
             this.updateHeader();
             
         } catch (error) {
+            console.error("Load user data error:", error);
             this.userState = this.getDefaultUserState();
             this.updateHeader();
             
@@ -661,15 +692,17 @@ class TornadoApp {
             totalAds: 0,
             totalPromoCodes: 0,
             totalTasksCompleted: 0,
-            totalWithdrawnAmount: 0,
+            completedTasks: [],
             referralEarnings: 0,
             lastDailyCheckin: 0,
             status: 'free',
             lastUpdated: this.getServerTime(),
             firebaseUid: this.auth?.currentUser?.uid || null,
             welcomeTasksCompleted: false,
-            joinedAt: this.getServerTime(),
-            isNewUser: true
+            welcomeMessageSent: false,
+            totalWithdrawnTON: 0,
+            watchedAds: 0,
+            joinedAt: this.getServerTime()
         };
     }
 
@@ -727,7 +760,6 @@ class TornadoApp {
             totalAds: 0,
             totalPromoCodes: 0,
             totalTasksCompleted: 0,
-            totalWithdrawnAmount: 0,
             referralEarnings: 0,
             completedTasks: [],
             lastWithdrawalDate: null,
@@ -740,7 +772,9 @@ class TornadoApp {
             firebaseUid: this.auth?.currentUser?.uid || null,
             welcomeTasksCompleted: false,
             welcomeTasksCompletedAt: null,
-            isNewUser: true
+            welcomeMessageSent: false,
+            totalWithdrawnTON: 0,
+            watchedAds: 0
         };
         
         await userRef.set(userData);
@@ -790,60 +824,25 @@ class TornadoApp {
 
     showMultiAccountBanPage() {
         document.body.innerHTML = `
-            <div style="
-                background-color:#000000;
-                color:#fff;
-                height:100vh;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                font-family:-apple-system, BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-                padding:20px;
-            ">
-                <div style="
-                    background:#111111;
-                    border-radius:22px;
-                    padding:40px 30px;
-                    width:85%;
-                    max-width:330px;
-                    text-align:center;
-                    box-shadow:0 0 40px rgba(0,0,0,0.5);
-                    border:1px solid rgba(255,255,255,0.08);
-                    animation:fadeIn 0.6s ease-out;
-                ">
-                    <div style="margin-bottom:24px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
-                            <circle cx="12" cy="12" r="10" stroke="#ff4d4d"/>
-                            <line x1="15" y1="9" x2="9" y2="15" stroke="#ff4d4d"/>
-                            <line x1="9" y1="9" x2="15" y2="15" stroke="#ff4d4d"/>
-                        </svg>
+            <div class="banned-container">
+                <div class="banned-content">
+                    <div class="banned-header">
+                        <div class="banned-icon">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                        <h2>Multi accounts not allowed</h2>
+                        <p>Access for this device has been blocked</p>
                     </div>
-                    <h2 style="
-                        font-size:18px;
-                        font-weight:600;
-                        color:#fff;
-                        letter-spacing:0.5px;
-                    ">Multi accounts not allowed</h2>
-                    <p style="
-                        margin-top:10px;
-                        color:#9da5b4;
-                        font-size:14px;
-                        line-height:1.5;
-                    ">Access for this device has been blocked.<br>Multiple Telegram accounts detected on the same IP.</p>
+                    
+                    <div class="ban-reason">
+                        <div class="ban-reason-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3>Ban Reason</h3>
+                        <p>Multiple Telegram accounts detected on the same IP</p>
+                    </div>
                 </div>
             </div>
-
-            <style>
-                @keyframes fadeIn {
-                    from { opacity:0; transform:scale(0.97); }
-                    to { opacity:1; transform:scale(1); }
-                }
-                @keyframes pulse {
-                    0% { transform:scale(1); opacity:1; }
-                    50% { transform:scale(1.1); opacity:0.8; }
-                    100% { transform:scale(1); opacity:1; }
-                }
-            </style>
         `;
     }
 
@@ -882,7 +881,6 @@ class TornadoApp {
             totalEarned: userData.totalEarned || 0,
             totalTasks: userData.totalTasks || 0,
             totalWithdrawals: userData.totalWithdrawals || 0,
-            totalWithdrawnAmount: userData.totalWithdrawnAmount || 0,
             totalAds: userData.totalAds || 0,
             totalPromoCodes: userData.totalPromoCodes || 0,
             totalTasksCompleted: userData.totalTasksCompleted || 0,
@@ -891,8 +889,10 @@ class TornadoApp {
             firebaseUid: this.auth?.currentUser?.uid || userData.firebaseUid || null,
             welcomeTasksCompleted: userData.welcomeTasksCompleted || false,
             welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null,
-            joinedAt: userData.joinedAt || userData.createdAt || currentTime,
-            isNewUser: userData.isNewUser || false
+            welcomeMessageSent: userData.welcomeMessageSent || false,
+            totalWithdrawnTON: userData.totalWithdrawnTON || 0,
+            watchedAds: userData.watchedAds || 0,
+            joinedAt: userData.joinedAt || userData.createdAt || currentTime
         };
         
         const updates = {};
@@ -981,6 +981,7 @@ class TornadoApp {
             await this.refreshReferralsList();
             
         } catch (error) {
+            console.error("Process referral bonus error:", error);
         }
     }
 
@@ -1030,6 +1031,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.error("Process referral task bonus error:", error);
         }
     }
 
@@ -1464,6 +1466,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.error("Check referrals verification error:", error);
         }
     }
 
@@ -1503,6 +1506,7 @@ class TornadoApp {
             
             localStorage.setItem(`ad_timers_${this.tgUser.id}`, JSON.stringify(this.adTimers));
         } catch (error) {
+            console.error("Save ad timers error:", error);
         }
     }
 
@@ -1539,7 +1543,7 @@ class TornadoApp {
                         <div class="error-icon">
                             <i class="fab fa-telegram"></i>
                         </div>
-                        <h2>TORNADO</h2>
+                        <h2>Tornado TON</h2>
                     </div>
                     
                     <div class="error-message">
@@ -1589,12 +1593,12 @@ class TornadoApp {
         
         if (userPhoto) {
             userPhoto.src = this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png';
-            userPhoto.style.width = '60px';
-            userPhoto.style.height = '60px';
+            userPhoto.style.width = '70px';
+            userPhoto.style.height = '70px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = '2px solid #1e40af';
-            userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
+            userPhoto.style.border = '3px solid #3b82f6';
+            userPhoto.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
         }
@@ -1602,10 +1606,10 @@ class TornadoApp {
         if (userName) {
             const fullName = this.tgUser.first_name || 'User';
             userName.textContent = this.truncateName(fullName, 20);
-            userName.style.fontSize = '1.2rem';
-            userName.style.fontWeight = '800';
+            userName.style.fontSize = '1.4rem';
+            userName.style.fontWeight = '700';
             userName.style.color = 'white';
-            userName.style.margin = '0 0 5px 0';
+            userName.style.margin = '0 0 8px 0';
             userName.style.whiteSpace = 'nowrap';
             userName.style.overflow = 'hidden';
             userName.style.textOverflow = 'ellipsis';
@@ -1615,9 +1619,9 @@ class TornadoApp {
         if (tonBalance) {
             const balance = this.safeNumber(this.userState.balance);
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
-            tonBalance.style.fontSize = '1.1rem';
+            tonBalance.style.fontSize = '1.2rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = '#1e40af';
+            tonBalance.style.color = '#3b82f6';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -1628,7 +1632,6 @@ class TornadoApp {
         this.updateHeader();
         this.renderTasksPage();
         this.renderReferralsPage();
-        this.renderWithdrawPage();
         this.renderProfilePage();
         this.setupNavigation();
         this.setupEventListeners();
@@ -1682,8 +1685,6 @@ class TornadoApp {
                 this.renderTasksPage();
             } else if (pageId === 'referrals-page') {
                 this.renderReferralsPage();
-            } else if (pageId === 'withdraw-page') {
-                this.renderWithdrawPage();
             } else if (pageId === 'profile-page') {
                 this.renderProfilePage();
             }
@@ -1708,7 +1709,19 @@ class TornadoApp {
                     </button>
                 </div>
                 
-                <div id="social-tab" class="tasks-tab-content active"></div>
+                <div id="social-tab" class="tasks-tab-content active">
+                    <div class="add-task-card">
+                        <div class="add-task-header">
+                            <i class="fas fa-plus-circle"></i>
+                            <h4>Add Your Task</h4>
+                        </div>
+                        <p>Promote your channel or group</p>
+                        <button id="add-task-btn" class="add-task-btn">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                    </div>
+                    <div id="social-tasks-container"></div>
+                </div>
                 <div id="partner-tab" class="tasks-tab-content"></div>
                 <div id="more-tab" class="tasks-tab-content">
                     <div class="promo-card">
@@ -1717,7 +1730,6 @@ class TornadoApp {
                                 <i class="fas fa-gift"></i>
                             </div>
                             <h3>Promo Codes</h3>
-                            
                         </div>
                         <input type="text" id="promo-input" class="promo-input" 
                                placeholder="Enter promo code" maxlength="20">
@@ -1752,6 +1764,7 @@ class TornadoApp {
             this.setupPromoCodeEvents();
             this.setupAdWatchEvents();
             this.startAdTimers();
+            this.setupAddTaskButton();
         }, 100);
     }
 
@@ -1771,7 +1784,7 @@ class TornadoApp {
                 if (targetTab) {
                     targetTab.classList.add('active');
                     
-                    if (tabId === 'social-tab' && targetTab.innerHTML === '') {
+                    if (tabId === 'social-tab' && targetTab.innerHTML.includes('social-tasks-container')) {
                         this.loadSocialTasks();
                     } else if (tabId === 'partner-tab' && targetTab.innerHTML === '') {
                         this.loadPartnerTasks();
@@ -1781,14 +1794,317 @@ class TornadoApp {
         });
     }
 
+    setupAddTaskButton() {
+        const addTaskBtn = document.getElementById('add-task-btn');
+        if (addTaskBtn) {
+            addTaskBtn.addEventListener('click', () => {
+                this.showAddTaskModal();
+            });
+        }
+    }
+
+    showAddTaskModal() {
+        const modal = document.createElement('div');
+        modal.className = 'add-task-modal';
+        
+        modal.innerHTML = `
+            <div class="add-task-content">
+                <div class="add-task-header">
+                    <h3>Add New Task</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                
+                <div class="add-task-body">
+                    <div class="form-group">
+                        <label><i class="fas fa-heading"></i> Task Name (max 20 chars)</label>
+                        <input type="text" id="task-name" class="form-input" 
+                               placeholder="e.g. Join My Channel" maxlength="20" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-link"></i> Task Link</label>
+                        <input type="text" id="task-link" class="form-input" 
+                               placeholder="https://t.me/..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-bullseye"></i> Task Target</label>
+                        <div class="task-target-grid">
+                            ${Object.entries(this.appConfig.TASK_PRICES).map(([target, price]) => `
+                                <div class="target-option" data-target="${target}" data-price="${price}">
+                                    <div class="target-users">${target}</div>
+                                    <div class="target-price">${price} TON</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-check-circle"></i> Task Check</label>
+                        <div class="check-buttons">
+                            <button type="button" class="check-btn" data-check="true">✅ Yes</button>
+                            <button type="button" class="check-btn" data-check="false">❌ No</button>
+                        </div>
+                        <div id="check-note" class="check-note" style="display: none;">
+                            <i class="fas fa-info-circle"></i> You must upgrade bot to admins
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="add-task-footer">
+                    <button id="confirm-pay-btn" class="pay-btn" disabled>
+                        <i class="fas fa-credit-card"></i> Confirm & Pay <span id="pay-amount">0.000</span> TON
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        this.setupAddTaskModalEvents(modal);
+    }
+
+    setupAddTaskModalEvents(modal) {
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.remove();
+            });
+        }
+        
+        const targetOptions = modal.querySelectorAll('.target-option');
+        targetOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                targetOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                const price = option.dataset.price;
+                const payAmount = modal.querySelector('#pay-amount');
+                if (payAmount) payAmount.textContent = price;
+                
+                this.updateAddTaskButtonState(modal);
+            });
+        });
+        
+        const checkButtons = modal.querySelectorAll('.check-btn');
+        const checkNote = modal.querySelector('#check-note');
+        
+        checkButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                checkButtons.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                
+                const needsBot = btn.dataset.check === 'true';
+                if (checkNote) {
+                    checkNote.style.display = needsBot ? 'block' : 'none';
+                }
+                
+                this.updateAddTaskButtonState(modal);
+            });
+        });
+        
+        const taskNameInput = modal.querySelector('#task-name');
+        const taskLinkInput = modal.querySelector('#task-link');
+        const confirmPayBtn = modal.querySelector('#confirm-pay-btn');
+        
+        if (taskNameInput && taskLinkInput && confirmPayBtn) {
+            taskNameInput.addEventListener('input', () => this.updateAddTaskButtonState(modal));
+            taskLinkInput.addEventListener('input', () => this.updateAddTaskButtonState(modal));
+        }
+        
+        if (confirmPayBtn) {
+            confirmPayBtn.addEventListener('click', async () => {
+                await this.processAddTask(modal);
+            });
+        }
+        
+        this.updateAddTaskButtonState(modal);
+    }
+
+    updateAddTaskButtonState(modal) {
+        const taskName = modal.querySelector('#task-name');
+        const taskLink = modal.querySelector('#task-link');
+        const selectedTarget = modal.querySelector('.target-option.selected');
+        const selectedCheck = modal.querySelector('.check-btn.selected');
+        const confirmPayBtn = modal.querySelector('#confirm-pay-btn');
+        
+        if (!taskName || !taskLink || !selectedTarget || !selectedCheck || !confirmPayBtn) return;
+        
+        const name = taskName.value.trim();
+        const link = taskLink.value.trim();
+        const price = parseFloat(selectedTarget.dataset.price);
+        const userBalance = this.safeNumber(this.userState.balance);
+        
+        confirmPayBtn.disabled = true;
+        
+        if (name && link && price && userBalance >= price) {
+            confirmPayBtn.disabled = false;
+        }
+    }
+
+    async processAddTask(modal) {
+        const taskName = modal.querySelector('#task-name').value.trim();
+        const taskLink = modal.querySelector('#task-link').value.trim();
+        const selectedTarget = modal.querySelector('.target-option.selected');
+        const selectedCheck = modal.querySelector('.check-btn.selected');
+        const confirmPayBtn = modal.querySelector('#confirm-pay-btn');
+        
+        if (!taskName || !taskLink || !selectedTarget || !selectedCheck) return;
+        
+        const target = selectedTarget.dataset.target;
+        const price = parseFloat(selectedTarget.dataset.price);
+        const needsBot = selectedCheck.dataset.check === 'true';
+        
+        const userBalance = this.safeNumber(this.userState.balance);
+        if (userBalance < price) {
+            this.notificationManager.showNotification("Insufficient Balance", `You need ${price} TON`, "error");
+            return;
+        }
+        
+        if (needsBot) {
+            const chatId = this.extractChatIdFromUrl(taskLink);
+            if (chatId) {
+                try {
+                    const isBotAdmin = await this.checkBotAdminStatus(chatId);
+                    if (!isBotAdmin) {
+                        this.notificationManager.showNotification("Bot Admin Required", "You must add bot as admins", "error");
+                        return;
+                    }
+                } catch (error) {
+                    this.notificationManager.showNotification("Error", "Failed to check bot admin status", "error");
+                    return;
+                }
+            }
+        }
+        
+        if (confirmPayBtn) {
+            confirmPayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            confirmPayBtn.disabled = true;
+        }
+        
+        try {
+            const newBalance = userBalance - price;
+            
+            if (this.db) {
+                await this.db.ref(`users/${this.tgUser.id}`).update({
+                    balance: newBalance
+                });
+                
+                const taskData = {
+                    name: taskName,
+                    url: taskLink,
+                    type: 'channel',
+                    category: 'social',
+                    reward: 0.001,
+                    currentCompletions: 0,
+                    maxCompletions: parseInt(target),
+                    createdBy: this.tgUser.id,
+                    createdAt: this.getServerTime(),
+                    status: 'active'
+                };
+                
+                const newTaskRef = await this.db.ref('config/tasks').push(taskData);
+                const taskId = newTaskRef.key;
+                
+                await this.db.ref(`userTasks/${this.tgUser.id}/${taskId}`).set({
+                    taskId: taskId,
+                    createdAt: this.getServerTime(),
+                    price: price,
+                    target: target
+                });
+            }
+            
+            this.userState.balance = newBalance;
+            this.updateHeader();
+            
+            modal.remove();
+            
+            this.notificationManager.showNotification("Success", `Task added for ${price} TON`, "success");
+            
+            this.loadSocialTasks();
+            
+        } catch (error) {
+            console.error("Add task error:", error);
+            this.notificationManager.showNotification("Error", "Failed to add task", "error");
+            
+            if (confirmPayBtn) {
+                confirmPayBtn.innerHTML = '<i class="fas fa-credit-card"></i> Confirm & Pay';
+                confirmPayBtn.disabled = false;
+            }
+        }
+    }
+
+    extractChatIdFromUrl(url) {
+        try {
+            if (!url) return null;
+            
+            url = url.toString().trim();
+            
+            if (url.includes('t.me/')) {
+                const match = url.match(/t\.me\/([^\/\?]+)/);
+                if (match && match[1]) {
+                    const username = match[1];
+                    
+                    if (username.startsWith('@')) return username;
+                    
+                    if (/^[a-zA-Z][a-zA-Z0-9_]{4,}$/.test(username)) return '@' + username;
+                    
+                    return username;
+                }
+            }
+            
+            return null;
+            
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async checkBotAdminStatus(chatId) {
+        try {
+            if (!this.tgUser?.id) return false;
+            
+            const response = await fetch('/api/telegram-bot', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': this.tgUser.id.toString(),
+                    'x-telegram-hash': this.tg?.initData || ''
+                },
+                body: JSON.stringify({
+                    action: 'getChatAdministrators',
+                    params: { chat_id: chatId }
+                })
+            });
+            
+            if (!response.ok) {
+                return false;
+            }
+            
+            const data = await response.json();
+            if (data.ok && data.result) {
+                const admins = data.result;
+                const isBotAdmin = admins.some(admin => {
+                    const isBot = admin.user?.is_bot;
+                    const isThisBot = admin.user?.username === this.appConfig.BOT_USERNAME.replace('@', '');
+                    return isBot && isThisBot;
+                });
+                return isBotAdmin;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
     async renderTasksTabContent() {
         await this.loadSocialTasks();
         await this.loadPartnerTasks();
     }
 
     async loadSocialTasks() {
-        const socialTab = document.getElementById('social-tab');
-        if (!socialTab) return;
+        const socialContainer = document.getElementById('social-tasks-container');
+        if (!socialContainer) return;
         
         try {
             let socialTasks = [];
@@ -1798,14 +2114,17 @@ class TornadoApp {
             
             if (socialTasks.length > 0) {
                 const tasksHTML = socialTasks.map(task => this.renderTaskCard(task)).join('');
-                socialTab.innerHTML = `
-                    <div class="referrals-list">
-                        ${tasksHTML}
+                socialContainer.innerHTML = `
+                    <div class="task-section">
+                        <h3 class="task-section-title"><i class="fas fa-users"></i> Social Tasks</h3>
+                        <div class="tasks-list">
+                            ${tasksHTML}
+                        </div>
                     </div>
                 `;
                 this.setupTaskButtons();
             } else {
-                socialTab.innerHTML = `
+                socialContainer.innerHTML = `
                     <div class="no-tasks">
                         <i class="fas fa-users"></i>
                         <p>No social tasks available now</p>
@@ -1813,7 +2132,7 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
-            socialTab.innerHTML = `
+            socialContainer.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Error loading social tasks</p>
@@ -1835,8 +2154,11 @@ class TornadoApp {
             if (partnerTasks.length > 0) {
                 const tasksHTML = partnerTasks.map(task => this.renderTaskCard(task)).join('');
                 partnerTab.innerHTML = `
-                    <div class="referrals-list">
-                        ${tasksHTML}
+                    <div class="task-section">
+                        <h3 class="task-section-title"><i class="fas fa-handshake"></i> Partner Tasks</h3>
+                        <div class="tasks-list">
+                            ${tasksHTML}
+                        </div>
                     </div>
                 `;
                 this.setupTaskButtons();
@@ -1873,17 +2195,21 @@ class TornadoApp {
         }
         
         return `
-            <div class="referral-row ${isCompleted ? 'task-completed' : ''}" id="task-${task.id}">
-                <div class="referral-row-avatar">
-                    <img src="${task.picture || defaultIcon}" alt="Task" 
-                         oncontextmenu="return false;" 
-                         ondragstart="return false;">
+            <div class="task-card ${isCompleted ? 'task-completed' : ''}" id="task-${task.id}">
+                <div class="task-header">
+                    <div class="task-icon">
+                        <i class="fas ${task.type === 'channel' ? 'fa-users' : 'fa-gamepad'}"></i>
+                    </div>
+                    <div class="task-content">
+                        <div class="task-title">${task.name}</div>
+                        <div class="task-description">${task.description || 'Join & Get Reward'}</div>
+                    </div>
                 </div>
-                <div class="referral-row-info">
-                    <p class="referral-row-username">${task.name}</p>
-                    <p class="task-reward-amount"> ${task.reward?.toFixed(5) || '0.00000'} TON</p>
-                </div>
-                <div class="referral-row-status">
+                <div class="task-reward">
+                    <div class="reward-amount">
+                        <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON" width="20">
+                        <span>${task.reward?.toFixed(5) || '0.00000'} TON</span>
+                    </div>
                     <button class="task-btn ${buttonClass}" 
                             data-task-id="${task.id}"
                             data-task-url="${task.url}"
@@ -1937,8 +2263,6 @@ class TornadoApp {
             );
             return;
         }
-        
-        this.rateLimiter.addRequest(this.tgUser.id, 'promo_code');
         
         const originalText = promoBtn.innerHTML;
         promoBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
@@ -2128,12 +2452,14 @@ class TornadoApp {
                 const currentBalance = this.safeNumber(this.userState.balance);
                 const newBalance = currentBalance + reward;
                 const newTotalAds = this.safeNumber(this.userState.totalAds) + 1;
+                const newWatchedAds = this.safeNumber(this.userState.watchedAds) + 1;
                 
                 const updates = {
                     balance: newBalance,
                     totalEarned: this.safeNumber(this.userState.totalEarned) + reward,
                     totalTasks: this.safeNumber(this.userState.totalTasks) + 1,
-                    totalAds: newTotalAds
+                    totalAds: newTotalAds,
+                    watchedAds: newWatchedAds
                 };
                 
                 if (this.db) {
@@ -2144,6 +2470,7 @@ class TornadoApp {
                 this.userState.totalEarned = this.safeNumber(this.userState.totalEarned) + reward;
                 this.userState.totalTasks = this.safeNumber(this.userState.totalTasks) + 1;
                 this.userState.totalAds = newTotalAds;
+                this.userState.watchedAds = newWatchedAds;
                 
                 this.cache.delete(`user_${this.tgUser.id}`);
                 
@@ -2199,7 +2526,7 @@ class TornadoApp {
         const referralsPage = document.getElementById('referrals-page');
         if (!referralsPage) return;
         
-        const referralLink = `https://t.me/TORNADO_Rbot/tornado?startapp=${this.tgUser.id}`;
+        const referralLink = `https://t.me/${this.appConfig.BOT_USERNAME}/ninja?startapp=${this.tgUser.id}`;
         const referrals = this.safeNumber(this.userState.referrals || 0);
         const referralEarnings = this.safeNumber(this.userState.referralEarnings || 0);
         
@@ -2207,33 +2534,31 @@ class TornadoApp {
         
         referralsPage.innerHTML = `
             <div class="referrals-container">
-                <div class="referral-link-section">
-                    <div class="referral-link-box">
-                        <p class="link-label">Your referral link:</p>
-                        <div class="link-display" id="referral-link-text">${referralLink}</div>
-                        <button class="copy-btn" id="copy-referral-link-btn">
-                            <i class="far fa-copy"></i> Copy Link
-                        </button>
-                    </div>
-                    
-                    <div class="referral-info">
-                        <div class="info-card">
-                            <div class="info-icon">
-                                <i class="fas fa-gift"></i>
-                            </div>
-                            <div class="info-content">
-                                <h4>Get ${this.appConfig.REFERRAL_BONUS_TON} TON</h4>
-                                <p>For each verified referral</p>
-                            </div>
+                <div class="referral-link-box">
+                    <p class="link-label">Your referral link:</p>
+                    <div class="link-display" id="referral-link-text">${referralLink}</div>
+                    <button class="copy-btn" id="copy-referral-link-btn">
+                        <i class="far fa-copy"></i> Copy Link
+                    </button>
+                </div>
+                
+                <div class="referral-info">
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-gift"></i>
                         </div>
-                        <div class="info-card">
-                            <div class="info-icon">
-                                <i class="fas fa-percentage"></i>
-                            </div>
-                            <div class="info-content">
-                                <h4>Earn ${this.appConfig.REFERRAL_PERCENTAGE}% Bonus</h4>
-                                <p>From your referrals' earnings</p>
-                            </div>
+                        <div class="info-content">
+                            <h4>Get ${this.appConfig.REFERRAL_BONUS_TON} TON</h4>
+                            <p>For each verified referral</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="info-content">
+                            <h4>Earn ${this.appConfig.REFERRAL_PERCENTAGE}% Bonus</h4>
+                            <p>From your referrals' earnings</p>
                         </div>
                     </div>
                 </div>
@@ -2324,7 +2649,7 @@ class TornadoApp {
         const copyBtn = document.getElementById('copy-referral-link-btn');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
-                const referralLink = `https://t.me/TORNADO_Rbot/tornado?startapp=${this.tgUser.id}`;
+                const referralLink = `https://t.me/${this.appConfig.BOT_USERNAME}/ninja?startapp=${this.tgUser.id}`;
                 this.copyToClipboard(referralLink);
                 
                 copyBtn.classList.add('copied');
@@ -2366,161 +2691,366 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.error("Refresh referrals list error:", error);
         }
     }
 
-    renderWithdrawPage() {
-        const withdrawPage = document.getElementById('withdraw-page');
-        if (!withdrawPage) return;
+    renderProfilePage() {
+        const profilePage = document.getElementById('profile-page');
+        if (!profilePage) return;
         
-        const userBalance = this.safeNumber(this.userState.balance);
-        const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
+        const user = this.userState;
+        const joinedDate = new Date(user.joinedAt || user.createdAt || this.getServerTime());
+        const formattedDate = this.formatDate(joinedDate);
+        const formattedTime = this.formatTime24(joinedDate);
         
-        withdrawPage.innerHTML = `
-            <div class="withdraw-container">
-                <div class="withdraw-form">
-                    <div class="form-group">
-                        <label class="form-label" for="wallet-input">
-                            <i class="fas fa-wallet"></i> TON Wallet Address
-                        </label>
-                        <input type="text" id="wallet-input" class="form-input" 
-                               placeholder="Enter your TON wallet address (UQ...)"
-                               required>
+        const depositOptions = [
+            { amount: 0.10, ton: 0.10 },
+            { amount: 0.50, ton: 0.50 },
+            { amount: 1.00, ton: 1.00 },
+            { amount: 5.00, ton: 5.00 }
+        ];
+        
+        const withdrawOptions = [
+            { amount: 0.10, ton: 0.10 },
+            { amount: 0.50, ton: 0.50 },
+            { amount: 1.00, ton: 1.00 },
+            { amount: 5.00, ton: 5.00 }
+        ];
+        
+        profilePage.innerHTML = `
+            <div class="profile-container">
+                <div class="user-profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar-container">
+                            <img src="${user.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
+                                 alt="${user.firstName}" 
+                                 class="profile-avatar"
+                                 oncontextmenu="return false;" 
+                                 ondragstart="return false;">
+                        </div>
+                        <h2 class="profile-username">${user.firstName}</h2>
+                        <div class="profile-userid">ID: ${user.telegramId}</div>
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label" for="amount-input">
-                            <i class="fas fa-gem"></i> Withdrawal Amount
-                        </label>
-                        <input type="number" id="amount-input" class="form-input" 
-                               step="0.00001" min="${minimumWithdraw}" max="${userBalance}"
-                               placeholder="Minimum: ${minimumWithdraw} TON"
-                               required>
+                    <div class="profile-stats">
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Joined at</span>
+                            <div class="stat-value">${formattedDate}</div>
+                            <div class="stat-time">${formattedTime}</div>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Watched Ads</span>
+                            <div class="stat-value">${user.watchedAds || 0}</div>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Total Referrals</span>
+                            <div class="stat-value">${user.referrals || 0}</div>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Total Withdrawals</span>
+                            <div class="stat-value">${user.totalWithdrawnTON?.toFixed(2) || '0.00'}</div>
+                            <div class="stat-unit">TON</div>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Total Earnings</span>
+                            <div class="stat-value">${user.totalEarned?.toFixed(2) || '0.00'}</div>
+                            <div class="stat-unit">TON</div>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-label">Tasks Completed</span>
+                            <div class="stat-value">${user.totalTasksCompleted || 0}</div>
+                        </div>
                     </div>
-                    
-                    <div class="withdraw-minimum-info">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Minimum Withdrawal: <strong>${minimumWithdraw.toFixed(3)} TON</strong></span>
-                    </div>
-                    
-                    <button id="withdraw-btn" class="withdraw-btn" 
-                            ${userBalance < minimumWithdraw ? 'disabled' : ''}>
-                        <i class="fas fa-paper-plane"></i> WITHDRAW NOW
-                    </button>
                 </div>
                 
-                <div class="history-section">
-                    <h3><i class="fas fa-history"></i> Withdrawal History</h3>
-                    <div class="history-list" id="withdrawal-history-list">
-                        ${this.userWithdrawals.length > 0 ? 
-                            this.renderWithdrawalHistory() : 
-                            '<div class="no-history"><i class="fas fa-history"></i><p>No withdrawal history</p></div>'
-                        }
+                <div class="deposit-withdraw-section">
+                    <h3 class="section-title"><i class="fas fa-wallet"></i> Wallet Actions</h3>
+                    
+                    <div class="action-buttons">
+                        <button id="deposit-btn" class="action-btn">
+                            <i class="fas fa-arrow-down"></i> Deposit
+                        </button>
+                        <button id="withdraw-btn" class="action-btn secondary" 
+                                ${user.balance < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-up"></i> Withdraw
+                        </button>
                     </div>
                 </div>
             </div>
         `;
         
-        this.setupWithdrawPageEvents();
+        this.setupProfilePageEvents();
     }
 
-    renderWithdrawalHistory() {
-        return this.userWithdrawals.slice(0, 5).map(transaction => {
-            const date = new Date(transaction.createdAt || transaction.timestamp);
-            const formattedDate = this.formatDate(date);
-            const formattedTime = this.formatTime24(date);
-            
-            const amount = this.safeNumber(transaction.tonAmount || transaction.amount || 0);
-            const status = transaction.status || 'pending';
-            const wallet = transaction.walletAddress || '';
-            const shortWallet = wallet.length > 10 ? 
-                `${wallet.substring(0, 5)}...${wallet.substring(wallet.length - 5)}` : 
-                wallet;
-            
-            const transactionLink = transaction.transaction_link || `https://tonviewer.com/${wallet}`;
-            
-            return `
-                <div class="history-item">
-                    <div class="history-top">
-                        <div class="history-title">
-                            <i class="fas fa-gem"></i>
-                            <span>TON Withdrawal</span>
-                        </div>
-                        <span class="history-status ${status}">${status.toUpperCase()}</span>
-                    </div>
-                    <div class="history-details">
-                        <div class="history-row">
-                            <span class="detail-label">Amount:</span>
-                            <span class="detail-value">${amount.toFixed(5)} TON</span>
-                        </div>
-                        <div class="history-row">
-                            <span class="detail-label">Wallet:</span>
-                            <span class="detail-value wallet-address" title="${wallet}">${shortWallet}</span>
-                        </div>
-                        <div class="history-row">
-                            <span class="detail-label">Date:</span>
-                            <span class="detail-value">${formattedDate} ${formattedTime}</span>
-                        </div>
-                    </div>
-                    ${status === 'completed' ? `
-                        <div class="history-explorer">
-                            <a href="${transactionLink}" target="_blank" class="explorer-link">
-                                <i class="fas fa-external-link-alt"></i> View on Explorer
-                            </a>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }).join('');
-    }
-
-    setupWithdrawPageEvents() {
-        const walletInput = document.getElementById('wallet-input');
-        const amountInput = document.getElementById('amount-input');
+    setupProfilePageEvents() {
+        const depositBtn = document.getElementById('deposit-btn');
         const withdrawBtn = document.getElementById('withdraw-btn');
         
-        if (amountInput) {
-            amountInput.addEventListener('input', () => {
-                const max = this.safeNumber(this.userState.balance);
-                const value = parseFloat(amountInput.value) || 0;
-                
-                if (value > max) {
-                    amountInput.value = max.toFixed(5);
-                }
+        if (depositBtn) {
+            depositBtn.addEventListener('click', () => {
+                this.showDepositModal();
             });
         }
         
         if (withdrawBtn) {
-            withdrawBtn.addEventListener('click', async () => {
-                await this.handleWithdrawal();
+            withdrawBtn.addEventListener('click', () => {
+                this.showWithdrawModal();
             });
         }
     }
 
-    async handleWithdrawal() {
-        const walletInput = document.getElementById('wallet-input');
-        const amountInput = document.getElementById('amount-input');
-        const withdrawBtn = document.getElementById('withdraw-btn');
+    showDepositModal() {
+        const modal = document.createElement('div');
+        modal.className = 'add-task-modal';
         
-        if (!walletInput || !amountInput || !withdrawBtn) return;
+        modal.innerHTML = `
+            <div class="add-task-content">
+                <div class="add-task-header">
+                    <h3>Deposit TON</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                
+                <div class="add-task-body">
+                    <div class="form-group">
+                        <label><i class="fas fa-coins"></i> Select Amount</label>
+                        <div class="option-grid">
+                            <div class="option-card" data-amount="0.10">
+                                <div class="option-amount">0.10</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="0.50">
+                                <div class="option-amount">0.50</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="1.00">
+                                <div class="option-amount">1.00</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="5.00">
+                                <div class="option-amount">5.00</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-wallet"></i> Wallet Address</label>
+                        <div class="wallet-address-display">
+                            <code>UQCMATcdykmpWDSLdI5ob-NScl55FSna3OOVy1l3i_2ICcPZ</code>
+                            <button class="copy-small-btn">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="form-help">Send exact amount to this address</p>
+                    </div>
+                </div>
+                
+                <div class="add-task-footer">
+                    <button id="confirm-deposit-btn" class="pay-btn" disabled>
+                        <i class="fas fa-check-circle"></i> I've Sent
+                    </button>
+                </div>
+            </div>
+        `;
         
-        const walletAddress = walletInput.value.trim();
-        const amount = parseFloat(amountInput.value);
-        const userBalance = this.safeNumber(this.userState.balance);
-        const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
+        document.body.appendChild(modal);
         
-        if (!walletAddress || walletAddress.length < 20) {
-            this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
-            return;
+        this.setupDepositModalEvents(modal);
+    }
+
+    setupDepositModalEvents(modal) {
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.remove();
+            });
         }
         
-        if (!amount || amount < minimumWithdraw) {
-            this.notificationManager.showNotification("Error", `Minimum withdrawal is ${minimumWithdraw} TON`, "error");
+        const optionCards = modal.querySelectorAll('.option-card');
+        optionCards.forEach(card => {
+            card.addEventListener('click', () => {
+                optionCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                const confirmBtn = modal.querySelector('#confirm-deposit-btn');
+                if (confirmBtn) confirmBtn.disabled = false;
+            });
+        });
+        
+        const copyBtn = modal.querySelector('.copy-small-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const address = 'UQCMATcdykmpWDSLdI5ob-NScl55FSna3OOVy1l3i_2ICcPZ';
+                this.copyToClipboard(address);
+                
+                this.notificationManager.showNotification("Copied", "Wallet address copied", "success");
+            });
+        }
+        
+        const confirmBtn = modal.querySelector('#confirm-deposit-btn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', async () => {
+                const selectedCard = modal.querySelector('.option-card.selected');
+                if (!selectedCard) return;
+                
+                const amount = parseFloat(selectedCard.dataset.amount);
+                
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                confirmBtn.disabled = true;
+                
+                try {
+                    this.notificationManager.showNotification(
+                        "Deposit Request", 
+                        `Please send ${amount} TON to the wallet address`, 
+                        "info"
+                    );
+                    
+                    modal.remove();
+                    
+                } catch (error) {
+                    confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> I\'ve Sent';
+                    confirmBtn.disabled = false;
+                    this.notificationManager.showNotification("Error", "Deposit request failed", "error");
+                }
+            });
+        }
+    }
+
+    showWithdrawModal() {
+        const modal = document.createElement('div');
+        modal.className = 'add-task-modal';
+        
+        modal.innerHTML = `
+            <div class="add-task-content">
+                <div class="add-task-header">
+                    <h3>Withdraw TON</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                
+                <div class="add-task-body">
+                    <div class="form-group">
+                        <label><i class="fas fa-coins"></i> Select Amount</label>
+                        <div class="option-grid">
+                            <div class="option-card" data-amount="0.10">
+                                <div class="option-amount">0.10</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="0.50">
+                                <div class="option-amount">0.50</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="1.00">
+                                <div class="option-amount">1.00</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                            <div class="option-card" data-amount="5.00">
+                                <div class="option-amount">5.00</div>
+                                <div class="option-price">TON</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-wallet"></i> Your TON Wallet Address</label>
+                        <input type="text" id="withdraw-address" class="form-input" 
+                               placeholder="UQ..." required>
+                        <p class="form-help">Enter your TON wallet address starting with UQ...</p>
+                    </div>
+                </div>
+                
+                <div class="add-task-footer">
+                    <button id="confirm-withdraw-btn" class="pay-btn" disabled>
+                        <i class="fas fa-paper-plane"></i> Withdraw
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        this.setupWithdrawModalEvents(modal);
+    }
+
+    setupWithdrawModalEvents(modal) {
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.remove();
+            });
+        }
+        
+        const optionCards = modal.querySelectorAll('.option-card');
+        const addressInput = modal.querySelector('#withdraw-address');
+        const confirmBtn = modal.querySelector('#confirm-withdraw-btn');
+        
+        optionCards.forEach(card => {
+            card.addEventListener('click', () => {
+                optionCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                this.updateWithdrawButtonState(modal);
+            });
+        });
+        
+        if (addressInput) {
+            addressInput.addEventListener('input', () => {
+                this.updateWithdrawButtonState(modal);
+            });
+        }
+        
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', async () => {
+                await this.processWithdrawal(modal);
+            });
+        }
+        
+        this.updateWithdrawButtonState(modal);
+    }
+
+    updateWithdrawButtonState(modal) {
+        const selectedCard = modal.querySelector('.option-card.selected');
+        const addressInput = modal.querySelector('#withdraw-address');
+        const confirmBtn = modal.querySelector('#confirm-withdraw-btn');
+        
+        if (!selectedCard || !addressInput || !confirmBtn) return;
+        
+        const amount = parseFloat(selectedCard.dataset.amount);
+        const address = addressInput.value.trim();
+        const userBalance = this.safeNumber(this.userState.balance);
+        const minWithdraw = this.appConfig.MINIMUM_WITHDRAW;
+        
+        confirmBtn.disabled = true;
+        
+        if (amount >= minWithdraw && amount <= userBalance && address.length > 10) {
+            confirmBtn.disabled = false;
+        }
+    }
+
+    async processWithdrawal(modal) {
+        const selectedCard = modal.querySelector('.option-card.selected');
+        const addressInput = modal.querySelector('#withdraw-address');
+        const confirmBtn = modal.querySelector('#confirm-withdraw-btn');
+        
+        if (!selectedCard || !addressInput || !confirmBtn) return;
+        
+        const amount = parseFloat(selectedCard.dataset.amount);
+        const address = addressInput.value.trim();
+        const userBalance = this.safeNumber(this.userState.balance);
+        const minWithdraw = this.appConfig.MINIMUM_WITHDRAW;
+        
+        if (amount < minWithdraw) {
+            this.notificationManager.showNotification("Error", `Minimum withdrawal is ${minWithdraw} TON`, "error");
             return;
         }
         
         if (amount > userBalance) {
             this.notificationManager.showNotification("Error", "Insufficient balance", "error");
+            return;
+        }
+        
+        if (address.length < 10) {
+            this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
             return;
         }
         
@@ -2545,8 +3075,6 @@ class TornadoApp {
             return;
         }
         
-        this.rateLimiter.addRequest(this.tgUser.id, 'withdrawal');
-        
         if (this.userState.lastWithdrawalDate) {
             const lastWithdrawal = new Date(this.userState.lastWithdrawalDate);
             const now = new Date(this.getServerTime());
@@ -2564,17 +3092,16 @@ class TornadoApp {
             }
         }
         
-        const originalText = withdrawBtn.innerHTML;
-        withdrawBtn.disabled = true;
-        withdrawBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        confirmBtn.disabled = true;
         
         try {
             if (this.adManager) {
                 const adShown = await this.adManager.showWithdrawalAd();
                 if (!adShown) {
                     this.notificationManager.showNotification("Ad Required", "Please watch the ad to process withdrawal", "info");
-                    withdrawBtn.disabled = false;
-                    withdrawBtn.innerHTML = originalText;
+                    confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Withdraw';
+                    confirmBtn.disabled = false;
                     return;
                 }
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -2582,12 +3109,13 @@ class TornadoApp {
             
             const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
+            const newTotalWithdrawnTON = this.safeNumber(this.userState.totalWithdrawnTON) + amount;
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
-                    totalWithdrawnAmount: this.safeNumber(this.userState.totalWithdrawnAmount) + amount,
+                    totalWithdrawnTON: newTotalWithdrawnTON,
                     lastWithdrawalDate: currentTime
                 });
                 
@@ -2595,7 +3123,7 @@ class TornadoApp {
                     userId: this.tgUser.id,
                     userName: this.userState.firstName,
                     username: this.userState.username,
-                    walletAddress: walletAddress,
+                    walletAddress: address,
                     amount: amount,
                     status: 'pending',
                     createdAt: currentTime
@@ -2606,7 +3134,7 @@ class TornadoApp {
             
             this.userState.balance = newBalance;
             this.userState.totalWithdrawals = this.safeNumber(this.userState.totalWithdrawals) + 1;
-            this.userState.totalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
+            this.userState.totalWithdrawnTON = newTotalWithdrawnTON;
             this.userState.lastWithdrawalDate = currentTime;
             
             this.cache.delete(`user_${this.tgUser.id}`);
@@ -2616,124 +3144,19 @@ class TornadoApp {
             
             await this.loadHistoryData();
             
-            walletInput.value = '';
-            amountInput.value = '';
+            modal.remove();
             
             this.updateHeader();
-            this.renderWithdrawPage();
             this.renderProfilePage();
             
             this.notificationManager.showNotification("Success", "Withdrawal request submitted!", "success");
             
         } catch (error) {
+            console.error("Withdrawal error:", error);
             this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
-        } finally {
-            withdrawBtn.disabled = false;
-            withdrawBtn.innerHTML = originalText;
+            confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Withdraw';
+            confirmBtn.disabled = false;
         }
-    }
-
-    renderProfilePage() {
-        const profilePage = document.getElementById('profile-page');
-        if (!profilePage) return;
-        
-        const joinedDate = new Date(this.userState.joinedAt || this.userState.createdAt || this.getServerTime());
-        const formattedDate = this.formatDate(joinedDate);
-        const formattedTime = this.formatTime24(joinedDate);
-        
-        profilePage.innerHTML = `
-            <div class="profile-container">
-                <div class="profile-header-card">
-                    <div class="profile-avatar-large">
-                        <img src="${this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
-                             alt="${this.userState.firstName}"
-                             oncontextmenu="return false;" 
-                             ondragstart="return false;">
-                    </div>
-                    <div class="profile-user-info">
-                        <h2 class="profile-username">${this.userState.username}</h2>
-                        <p class="profile-joined">Joined at: ${formattedDate} ${formattedTime}</p>
-                    </div>
-                </div>
-                
-                <div class="profile-stats-grid">
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-ad"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Watched Ads</h4>
-                            <p class="profile-stat-value">${this.userState.totalAds || 0}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Total Referrals</h4>
-                            <p class="profile-stat-value">${this.userState.referrals || 0}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Total Withdrawals</h4>
-                            <p class="profile-stat-value">${this.userState.totalWithdrawals || 0}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Withdrawn Amount</h4>
-                            <p class="profile-stat-value">${this.safeNumber(this.userState.totalWithdrawnAmount || 0).toFixed(5)} TON</p>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-tasks"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Total Tasks</h4>
-                            <p class="profile-stat-value">${this.userState.totalTasks || 0}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-stat-card">
-                        <div class="profile-stat-icon">
-                            <i class="fas fa-gem"></i>
-                        </div>
-                        <div class="profile-stat-content">
-                            <h4>Total Earnings</h4>
-                            <p class="profile-stat-value">${this.safeNumber(this.userState.totalEarned || 0).toFixed(5)} TON</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="profile-extra-info">
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-id-card"></i> Telegram ID:</span>
-                        <span class="info-value">${this.tgUser.id}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-user-tag"></i> Referral Code:</span>
-                        <span class="info-value">${this.userState.referralCode}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-gift"></i> Promo Codes Used:</span>
-                        <span class="info-value">${this.userState.totalPromoCodes || 0}</span>
-                    </div>
-                </div>
-            </div>
-        `;
     }
 
     copyToClipboard(text) {
@@ -2759,7 +3182,7 @@ class TornadoApp {
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
-        return `${day}-${month}-${year}`;
+        return `${day}/${month}/${year}`;
     }
 
     formatTime24(timestamp) {
@@ -2815,7 +3238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="error-icon">
                         <i class="fab fa-telegram"></i>
                     </div>
-                    <h2>TORNADO</h2>
+                    <h2>Tornado TON</h2>
                     <p>Please open from Telegram Mini App</p>
                 </div>
             </div>
