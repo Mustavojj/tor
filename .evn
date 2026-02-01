@@ -1,3 +1,3 @@
-FIREBASE_CONFIG='{"apiKey":"AIzaSyDde7CL3tUGhmi6nP8k57V1DbYm6-lMN_k","authDomain":"ninja-dbdb.firebaseapp.com","databaseURL":"https://ninja-dbdb-default-rtdb.firebaseio.com","projectId":"ninja-dbdb","storageBucket":"ninja-dbdb.firebasestorage.app","messagingSenderId":"964108797706","appId":"1:964108797706:web:95e6bccba0934f7bdbdcf3","measurementId":"G-2EV8GCX8JK"}'
+FIREBASE_CONFIG={"apiKey":"AIzaSyDde7CL3tUGhmi6nP8k57V1DbYm6-lMN_k","authDomain":"ninja-dbdb.firebaseapp.com","databaseURL":"https://ninja-dbdb-default-rtdb.firebaseio.com","projectId":"ninja-dbdb","storageBucket":"ninja-dbdb.firebasestorage.app","messagingSenderId":"964108797706","appId":"1:964108797706:web:95e6bccba0934f7bdbdcf3","measurementId":"G-2EV8GCX8JK"}
 
 TELEGRAM_BOT_TOKEN="8591215569:AAHrJNyxOovCnQzxYJSDWzfDUwOuyRxODGs"
