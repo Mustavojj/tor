@@ -12,6 +12,10 @@ export default async function handler(req, res) {
         const { action, params } = req.body;
         const BOT_TOKEN = process.env.BOT_TOKEN;
         
+        if (!BOT_TOKEN) {
+            return res.status(500).json({ error: 'Bot token not configured' });
+        }
+        
         let endpoint = '';
         switch(action) {
             case 'getChatMember':
@@ -34,6 +38,7 @@ export default async function handler(req, res) {
         res.status(200).json(data);
         
     } catch (error) {
+        console.error('Telegram bot API error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }
