@@ -1,14 +1,12 @@
 const CORE_CONFIG = {
     CACHE_TTL: 300000,
     RATE_LIMITS: {
-        'task_start': { limit: 1, window: 3000 },
         'withdrawal': { limit: 1, window: 86400000 },
-        'ad_reward': { limit: 10, window: 300000 },
-        'promo_code': { limit: 5, window: 300000 }
+        'ad_reward': { limit: 10, window: 300000 }
     },
     NOTIFICATION_COOLDOWN: 2000,
     MAX_NOTIFICATION_QUEUE: 3,
-    AD_COOLDOWN: 3600000,
+    AD_COOLDOWN: 600000,
     INITIAL_AD_DELAY: 30000,
     INTERVAL_AD_DELAY: 150000
 };
@@ -64,7 +62,7 @@ class RateLimiter {
 
     checkLimit(userId, action) {
         const key = `${userId}_${action}`;
-        const now = this.getServerTime();
+        const now = Date.now() + (window.app?.serverTimeOffset || 0);
         const limitConfig = this.limits[action] || { limit: 5, window: 60000 };
         
         if (!this.requests.has(key)) this.requests.set(key, []);
@@ -81,22 +79,8 @@ class RateLimiter {
             };
         }
         
+        recentRequests.push(now);
         return { allowed: true };
-    }
-
-    addRequest(userId, action) {
-        const key = `${userId}_${action}`;
-        const now = this.getServerTime();
-        
-        if (!this.requests.has(key)) this.requests.set(key, []);
-        
-        const userRequests = this.requests.get(key);
-        userRequests.push(now);
-        this.requests.set(key, userRequests);
-    }
-
-    getServerTime() {
-        return Date.now() + (window.app?.serverTimeOffset || 0);
     }
 }
 
@@ -138,23 +122,23 @@ class NotificationManager {
                     transform: translateX(-50%);
                     width: 85%;
                     max-width: 320px;
-                    background: #111111;
+                    background: rgba(15, 23, 42, 0.95);
                     backdrop-filter: blur(20px);
                     border-radius: 20px;
                     padding: 15px 18px;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
                     z-index: 10000;
                     animation: notificationSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                    border: 1px solid #333333;
+                    border: 1px solid rgba(59, 130, 246, 0.2);
                     overflow: hidden;
                     display: flex;
                     align-items: center;
                     gap: 15px;
                 }
                 
-                .notification.info { border-left: 6px solid #0ea5e9; }
-                .notification.success { border-left: 6px solid #16a34a; }
-                .notification.error { border-left: 6px solid #dc2626; }
+                .notification.info { border-left: 6px solid #3b82f6; }
+                .notification.success { border-left: 6px solid #10b981; }
+                .notification.error { border-left: 6px solid #ef4444; }
                 .notification.warning { border-left: 6px solid #f59e0b; }
                 
                 .notification-icon {
@@ -169,22 +153,22 @@ class NotificationManager {
                 }
                 
                 .notification.info .notification-icon {
-                    background: #222222;
-                    color: #0ea5e9;
+                    background: rgba(59, 130, 246, 0.2);
+                    color: #3b82f6;
                 }
                 
                 .notification.success .notification-icon {
-                    background: #222222;
-                    color: #16a34a;
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #10b981;
                 }
                 
                 .notification.error .notification-icon {
-                    background: #222222;
-                    color: #dc2626;
+                    background: rgba(239, 68, 68, 0.2);
+                    color: #ef4444;
                 }
                 
                 .notification.warning .notification-icon {
-                    background: #222222;
+                    background: rgba(245, 158, 11, 0.2);
                     color: #f59e0b;
                 }
                 
@@ -218,7 +202,7 @@ class NotificationManager {
                 
                 .notification-progress-fill {
                     height: 100%;
-                    background: #1e40af;
+                    background: #3b82f6;
                     animation: notificationProgress 4s linear forwards;
                 }
                 
@@ -228,7 +212,7 @@ class NotificationManager {
                     right: 8px;
                     width: 22px;
                     height: 22px;
-                    background: rgba(0, 0, 0, 0.05);
+                    background: rgba(0, 0, 0, 0.1);
                     border: none;
                     border-radius: 50%;
                     color: #94a3b8;
@@ -243,7 +227,7 @@ class NotificationManager {
                 
                 .notification-close:hover {
                     opacity: 1;
-                    background: rgba(0, 0, 0, 0.1);
+                    background: rgba(0, 0, 0, 0.2);
                 }
             `;
             document.head.appendChild(style);
@@ -395,7 +379,7 @@ class AdManager {
         return false;
     }
     
-    async showQuestRewardAd() {
+    async showPromoCodeAd() {
         if (this.isAdPlaying) return false;
         
         if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
@@ -433,83 +417,7 @@ class AdManager {
         return false;
     }
     
-    async showPromoCodeAd() {
-        if (this.isAdPlaying) return false;
-        
-        if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
-            return new Promise((resolve) => {
-                this.isAdPlaying = true;
-                window.AdBlock19345.show().then((result) => {
-                    this.isAdPlaying = false;
-                    resolve(true);
-                }).catch((error) => {
-                    this.isAdPlaying = false;
-                    resolve(false);
-                });
-            });
-        }
-        
-        return false;
-    }
-    
     async showWatchAd1() {
-        if (this.isAdPlaying) return false;
-        
-        if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
-            return new Promise((resolve) => {
-                this.isAdPlaying = true;
-                window.AdBlock19345.show().then((result) => {
-                    this.isAdPlaying = false;
-                    resolve(true);
-                }).catch((error) => {
-                    this.isAdPlaying = false;
-                    resolve(false);
-                });
-            });
-        }
-        
-        return false;
-    }
-    
-    async showDiceAd() {
-        if (this.isAdPlaying) return false;
-        
-        if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
-            return new Promise((resolve) => {
-                this.isAdPlaying = true;
-                window.AdBlock19345.show().then((result) => {
-                    this.isAdPlaying = false;
-                    resolve(true);
-                }).catch((error) => {
-                    this.isAdPlaying = false;
-                    resolve(false);
-                });
-            });
-        }
-        
-        return false;
-    }
-    
-    async showDicePrizeAd() {
-        if (this.isAdPlaying) return false;
-        
-        if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
-            return new Promise((resolve) => {
-                this.isAdPlaying = true;
-                window.AdBlock19345.show().then((result) => {
-                    this.isAdPlaying = false;
-                    resolve(true);
-                }).catch((error) => {
-                    this.isAdPlaying = false;
-                    resolve(false);
-                });
-            });
-        }
-        
-        return false;
-    }
-    
-    async showTaskAd() {
         if (this.isAdPlaying) return false;
         
         if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
