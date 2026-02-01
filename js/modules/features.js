@@ -1,11 +1,4 @@
-const FEATURES_CONFIG = {
-    TASK_VERIFICATION_DELAY: 10,
-    REFERRAL_BONUS_TON: 0.001,
-    REFERRAL_PERCENTAGE: 20,
-    REFERRALS_PER_PAGE: 10,
-    PARTNER_TASK_REWARD: 0.001,
-    SOCIAL_TASK_REWARD: 0.0005
-};
+import { APP_CONFIG } from '../data.js';
 
 class TaskManager {
     constructor(app) {
@@ -14,6 +7,15 @@ class TaskManager {
         this.partnerTasks = [];
         this.socialTasks = [];
         this.taskTimers = new Map();
+        this.TASK_PRICES = {
+            100: 0.100,
+            250: 0.250,
+            500: 0.500,
+            1000: 1.000,
+            2500: 2.500,
+            5000: 5.000
+        };
+        this.PRICE_PER_1000 = 1.00;
     }
 
     async loadTasksData(forceRefresh = false) {
@@ -38,7 +40,6 @@ class TaskManager {
             }, 30000);
             
         } catch (error) {
-            console.error("Load tasks data error:", error);
             this.partnerTasks = [];
             this.socialTasks = [];
         }
@@ -79,7 +80,7 @@ class TaskManager {
                             id: child.key, 
                             name: taskData.name || 'Unknown Task',
                             description: taskData.description || 'Join & Get Reward',
-                            picture: taskData.picture || 'https://i.ibb.co/GvWFRrnp/ninja.png',
+                            picture: taskData.picture || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png',
                             url: taskData.url || '',
                             type: taskData.type || 'channel',
                             category: category,
@@ -140,7 +141,7 @@ class TaskManager {
                 const admins = data.result;
                 const isBotAdmin = admins.some(admin => {
                     const isBot = admin.user?.is_bot;
-                    const isThisBot = admin.user?.username === this.app.appConfig.BOT_USERNAME.replace('@', '');
+                    const isThisBot = admin.user?.username === APP_CONFIG.BOT_USERNAME;
                     return isBot && isThisBot;
                 });
                 return isBotAdmin;
@@ -215,6 +216,8 @@ class TaskManager {
             );
             return;
         }
+        
+        this.app.rateLimiter.addRequest(this.app.tgUser.id, 'task_start');
         
         window.open(url, '_blank');
         
@@ -448,19 +451,20 @@ class TaskManager {
             }
             
             this.app.updateHeader();
+            this.app.renderProfilePage();
             
             await this.app.updateAppStats('totalTasks', 1);
             
             this.app.cache.delete(`tasks_${this.app.tgUser.id}`);
             this.app.cache.delete(`user_${this.app.tgUser.id}`);
-            
-            this.enableAllTaskButtons();
-            this.app.isProcessingTask = false;
 
             if (this.app.userState.referredBy) {
                 await this.app.processReferralTaskBonus(this.app.userState.referredBy, taskReward);
             }
             
+            this.enableAllTaskButtons();
+            this.app.isProcessingTask = false;
+
             this.app.notificationManager.showNotification(
                 "Task Completed!", 
                 `+${taskReward.toFixed(5)} TON`, 
@@ -491,6 +495,57 @@ class TaskManager {
             }
             
             throw error;
+        }
+    }
+
+    async addNewTask(taskData) {
+        try {
+            const { name, url, target, checkEnabled, price } = taskData;
+            
+            if (this.app.userState.balance < price) {
+                this.app.notificationManager.showNotification("Error", "Insufficient balance", "error");
+                return false;
+            }
+            
+            const newBalance = this.app.userState.balance - price;
+            
+            if (this.app.db) {
+                await this.app.db.ref(`users/${this.app.tgUser.id}`).update({
+                    balance: newBalance
+                });
+                
+                const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                const newTask = {
+                    id: taskId,
+                    name: name,
+                    url: url,
+                    type: 'channel',
+                    category: 'social',
+                    reward: 0.001,
+                    currentCompletions: 0,
+                    maxCompletions: target,
+                    status: 'active',
+                    taskStatus: 'active',
+                    createdBy: this.app.tgUser.id,
+                    createdAt: this.app.getServerTime(),
+                    checkEnabled: checkEnabled || false
+                };
+                
+                await this.app.db.ref(`config/tasks/${taskId}`).set(newTask);
+                
+                this.app.userState.balance = newBalance;
+                this.app.updateHeader();
+                this.app.renderProfilePage();
+                
+                return true;
+            }
+            
+            return false;
+            
+        } catch (error) {
+            console.error('Error adding new task:', error);
+            return false;
         }
     }
 
@@ -533,12 +588,26 @@ class TaskManager {
     }
 }
 
+class QuestManager {
+    constructor(app) {
+        this.app = app;
+    }
+
+    async loadQuestsData() {
+        return;
+    }
+
+    async updateQuestsProgress() {
+        return;
+    }
+}
+
 class ReferralManager {
     constructor(app) {
         this.app = app;
         this.recentReferrals = [];
         this.currentPage = 1;
-        this.itemsPerPage = FEATURES_CONFIG.REFERRALS_PER_PAGE;
+        this.itemsPerPage = 10;
         this.isLoading = false;
         this.hasMore = true;
     }
@@ -560,4 +629,4 @@ class ReferralManager {
     }
 }
 
-export { TaskManager, ReferralManager };
+export { TaskManager, QuestManager, ReferralManager };
