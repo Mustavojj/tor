@@ -1,8 +1,10 @@
 const CORE_CONFIG = {
     CACHE_TTL: 300000,
     RATE_LIMITS: {
+        'task_start': { limit: 1, window: 3000 },
         'withdrawal': { limit: 1, window: 86400000 },
-        'ad_reward': { limit: 10, window: 300000 }
+        'ad_reward': { limit: 10, window: 300000 },
+        'promo_code': { limit: 5, window: 300000 }
     },
     NOTIFICATION_COOLDOWN: 2000,
     MAX_NOTIFICATION_QUEUE: 3,
@@ -62,7 +64,7 @@ class RateLimiter {
 
     checkLimit(userId, action) {
         const key = `${userId}_${action}`;
-        const now = Date.now() + (window.app?.serverTimeOffset || 0);
+        const now = this.getServerTime();
         const limitConfig = this.limits[action] || { limit: 5, window: 60000 };
         
         if (!this.requests.has(key)) this.requests.set(key, []);
@@ -79,8 +81,22 @@ class RateLimiter {
             };
         }
         
-        recentRequests.push(now);
         return { allowed: true };
+    }
+
+    addRequest(userId, action) {
+        const key = `${userId}_${action}`;
+        const now = this.getServerTime();
+        
+        if (!this.requests.has(key)) this.requests.set(key, []);
+        
+        const userRequests = this.requests.get(key);
+        userRequests.push(now);
+        this.requests.set(key, userRequests);
+    }
+
+    getServerTime() {
+        return Date.now() + (window.app?.serverTimeOffset || 0);
     }
 }
 
@@ -122,24 +138,24 @@ class NotificationManager {
                     transform: translateX(-50%);
                     width: 85%;
                     max-width: 320px;
-                    background: rgba(15, 23, 42, 0.95);
+                    background: rgba(17, 24, 39, 0.9);
                     backdrop-filter: blur(20px);
                     border-radius: 20px;
                     padding: 15px 18px;
                     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
                     z-index: 10000;
                     animation: notificationSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                    border: 1px solid rgba(59, 130, 246, 0.2);
+                    border: 1px solid rgba(59, 130, 246, 0.3);
                     overflow: hidden;
                     display: flex;
                     align-items: center;
                     gap: 15px;
                 }
                 
-                .notification.info { border-left: 6px solid #3b82f6; }
-                .notification.success { border-left: 6px solid #10b981; }
-                .notification.error { border-left: 6px solid #ef4444; }
-                .notification.warning { border-left: 6px solid #f59e0b; }
+                .notification.info { border-left: 6px solid rgba(14, 165, 233, 0.8); }
+                .notification.success { border-left: 6px solid rgba(22, 163, 74, 0.8); }
+                .notification.error { border-left: 6px solid rgba(220, 38, 38, 0.8); }
+                .notification.warning { border-left: 6px solid rgba(245, 158, 11, 0.8); }
                 
                 .notification-icon {
                     width: 42px;
@@ -153,18 +169,18 @@ class NotificationManager {
                 }
                 
                 .notification.info .notification-icon {
-                    background: rgba(59, 130, 246, 0.2);
-                    color: #3b82f6;
+                    background: rgba(14, 165, 233, 0.2);
+                    color: #0ea5e9;
                 }
                 
                 .notification.success .notification-icon {
-                    background: rgba(16, 185, 129, 0.2);
-                    color: #10b981;
+                    background: rgba(22, 163, 74, 0.2);
+                    color: #16a34a;
                 }
                 
                 .notification.error .notification-icon {
-                    background: rgba(239, 68, 68, 0.2);
-                    color: #ef4444;
+                    background: rgba(220, 38, 38, 0.2);
+                    color: #dc2626;
                 }
                 
                 .notification.warning .notification-icon {
@@ -197,12 +213,12 @@ class NotificationManager {
                     left: 0;
                     width: 100%;
                     height: 3px;
-                    background: rgba(0, 0, 0, 0.05);
+                    background: rgba(0, 0, 0, 0.1);
                 }
                 
                 .notification-progress-fill {
                     height: 100%;
-                    background: #3b82f6;
+                    background: linear-gradient(90deg, #1e40af, #3b82f6);
                     animation: notificationProgress 4s linear forwards;
                 }
                 
@@ -212,7 +228,7 @@ class NotificationManager {
                     right: 8px;
                     width: 22px;
                     height: 22px;
-                    background: rgba(0, 0, 0, 0.1);
+                    background: rgba(255, 255, 255, 0.1);
                     border: none;
                     border-radius: 50%;
                     color: #94a3b8;
@@ -227,7 +243,7 @@ class NotificationManager {
                 
                 .notification-close:hover {
                     opacity: 1;
-                    background: rgba(0, 0, 0, 0.2);
+                    background: rgba(255, 255, 255, 0.2);
                 }
             `;
             document.head.appendChild(style);
@@ -418,6 +434,25 @@ class AdManager {
     }
     
     async showWatchAd1() {
+        if (this.isAdPlaying) return false;
+        
+        if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
+            return new Promise((resolve) => {
+                this.isAdPlaying = true;
+                window.AdBlock19345.show().then((result) => {
+                    this.isAdPlaying = false;
+                    resolve(true);
+                }).catch((error) => {
+                    this.isAdPlaying = false;
+                    resolve(false);
+                });
+            });
+        }
+        
+        return false;
+    }
+    
+    async showTaskAd() {
         if (this.isAdPlaying) return false;
         
         if (window.AdBlock19345 && typeof window.AdBlock19345.show === 'function') {
