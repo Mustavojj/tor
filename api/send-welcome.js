@@ -1,7 +1,5 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     
     try {
         const userId = req.headers['x-telegram-user'];
@@ -11,41 +9,56 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
         
-        const { chat_id, text, photo, buttons } = req.body;
+        const { user_id, first_name, photo_url, message } = req.body;
         const BOT_TOKEN = process.env.BOT_TOKEN;
         
-        if (!BOT_TOKEN) {
-            return res.status(500).json({ error: 'Bot token not configured' });
-        }
+        const welcomeMessage = `⚡ Welcome to Tornado!\n\nStart your journey with us!`;
         
-        const inlineKeyboard = {
-            inline_keyboard: buttons.map(btn => [{
-                text: btn.text,
-                url: btn.url
-            }])
-        };
-        
-        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: chat_id,
-                photo: photo,
-                caption: text,
-                reply_markup: inlineKeyboard
+                chat_id: user_id,
+                text: welcomeMessage,
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            {
+                                text: "Start App 💎",
+                                url: "https://t.me/Tornado_Rbot/start"
+                            },
+                            {
+                                text: "Get News 📰",
+                                url: "https://t.me/Tornado_Channel"
+                            }
+                        ]
+                    ]
+                }
             })
         });
         
         const data = await response.json();
         
-        if (data.ok) {
-            res.status(200).json({ success: true, message: 'Welcome message sent' });
-        } else {
-            res.status(400).json({ error: 'Failed to send message', details: data });
+        if (data.ok && photo_url && photo_url !== 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png') {
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: user_id,
+                        photo: photo_url,
+                        caption: `Welcome ${first_name}! 🎉`
+                    })
+                });
+            } catch (photoError) {
+                console.log("Photo send error:", photoError);
+            }
         }
         
+        res.status(200).json({ success: true });
+        
     } catch (error) {
-        console.error('Send welcome message error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }
