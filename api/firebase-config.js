@@ -50,29 +50,31 @@ export default async function handler(req, res) {
         
         global.firebaseRequestStore[requestKey].push(now);
         
-        const firebaseConfig = {
-            apiKey: process.env.FIREBASE_API_KEY,
-            authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-            databaseURL: process.env.FIREBASE_DATABASE_URL,
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-            appId: process.env.FIREBASE_APP_ID,
-            measurementId: process.env.FIREBASE_MEASUREMENT_ID
+        const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '{}');
+        
+        const safeConfig = {
+            apiKey: firebaseConfig.apiKey || "AIzaSyExample123",
+            authDomain: firebaseConfig.authDomain || "tornado-app.firebaseapp.com",
+            databaseURL: firebaseConfig.databaseURL || "https://tornado-app-default-rtdb.firebaseio.com",
+            projectId: firebaseConfig.projectId || "tornado-app",
+            storageBucket: firebaseConfig.storageBucket || "tornado-app.appspot.com",
+            messagingSenderId: firebaseConfig.messagingSenderId || "123456789012",
+            appId: firebaseConfig.appId || "1:123456789012:web:abcdef1234567890",
+            measurementId: firebaseConfig.measurementId || "G-EXAMPLE123"
         };
         
-        res.status(200).json(firebaseConfig);
+        res.status(200).json(safeConfig);
         
     } catch (error) {
         res.status(200).json({
             apiKey: "AIzaSyDefaultKey123",
-            authDomain: "ninja-dbdb.firebaseapp.com",
-            databaseURL: "https://ninja-dbdb-default-rtdb.firebaseio.com",
-            projectId: "ninja-dbdb",
-            storageBucket: "ninja-dbdb.firebasestorage.app",
-            messagingSenderId: "964108797706",
-            appId: "1:964108797706:web:95e6bccba0934f7bdbdcf3",
-            measurementId: "G-2EV8GCX8JK"
+            authDomain: "tornado-default.firebaseapp.com",
+            databaseURL: "https://tornado-default-rtdb.firebaseio.com",
+            projectId: "tornado-default",
+            storageBucket: "tornado-default.appspot.com",
+            messagingSenderId: "987654321098",
+            appId: "1:987654321098:web:default1234567890",
+            measurementId: "G-DEFAULT123"
         });
     }
-            }
+}
