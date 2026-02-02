@@ -1646,8 +1646,8 @@ class TornadoApp {
         }
         
         const bottomNavPhoto = document.getElementById('bottom-nav-user-photo');
-        if (bottomNavPhoto && this.userState.photo_url) {
-    bottomNavPhoto.src = this.userState.photo_url;
+        if (bottomNavPhoto && this.tgUser.photo_url) {
+    bottomNavPhoto.src = this.tgUser.photo_url;
 }
     }
 
