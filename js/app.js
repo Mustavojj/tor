@@ -51,9 +51,9 @@ class TornadoApp {
         };
         
         this.pages = [
-            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#3b82f6' },
-            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#3b82f6' },
-            { id: 'profile-page', name: 'Profile', icon: 'fa-user', color: '#3b82f6' }
+            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#34d399' },
+            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#34d399' },
+            { id: 'profile-page', name: 'Profile', icon: 'fa-user', color: '#34d399' }
         ];
         
         this.cache = new CacheManager();
@@ -197,42 +197,44 @@ class TornadoApp {
         if (this.isInitializing || this.isInitialized) return;
         
         this.isInitializing = true;
+        this.showLoadingProgress(5);
         
         try {
-            this.showLoadingProgress(5);
-            
             if (!window.Telegram || !window.Telegram.WebApp) {
-                this.showError("Please open from Telegram Mini App");
+                setTimeout(() => {
+                    this.showError("Please open from Telegram Mini App");
+                }, 100);
+                this.isInitializing = false;
                 return;
             }
             
             this.tg = window.Telegram.WebApp;
+            this.tg.ready();
+            this.tg.expand();
             
             if (!this.tg.initDataUnsafe || !this.tg.initDataUnsafe.user) {
-                this.showError("User data not available");
+                setTimeout(() => {
+                    this.showError("User data not available");
+                }, 100);
+                this.isInitializing = false;
                 return;
             }
             
             this.tgUser = this.tg.initDataUnsafe.user;
+            this.showLoadingProgress(20);
             
-            this.showLoadingProgress(8);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
             if (!multiAccountAllowed) {
                 this.isInitializing = false;
                 return;
             }
             
-            this.showLoadingProgress(12);
-            
-            this.tg.ready();
-            this.tg.expand();
-            
-            this.showLoadingProgress(15);
+            this.showLoadingProgress(30);
             this.setupTelegramTheme();
             
             this.notificationManager = new NotificationManager();
             
-            this.showLoadingProgress(20);
+            this.showLoadingProgress(40);
             
             const firebaseSuccess = await this.initializeFirebase();
             
@@ -240,7 +242,7 @@ class TornadoApp {
                 this.setupFirebaseAuth();
             }
             
-            this.showLoadingProgress(40);
+            this.showLoadingProgress(60);
             
             await this.syncServerTime();
             
@@ -256,7 +258,7 @@ class TornadoApp {
                 return;
             }
             
-            this.showLoadingProgress(50);
+            this.showLoadingProgress(70);
             
             this.adManager = new AdManager(this);
             this.taskManager = new TaskManager(this);
@@ -265,28 +267,22 @@ class TornadoApp {
             
             this.startReferralMonitor();
             
-            this.showLoadingProgress(60);
+            this.showLoadingProgress(80);
             
             try {
                 await this.loadTasksData();
             } catch (taskError) {
             }
             
-            this.showLoadingProgress(70);
-            
             try {
                 await this.loadHistoryData();
             } catch (historyError) {
             }
             
-            this.showLoadingProgress(80);
-            
             try {
                 await this.loadAppStats();
             } catch (statsError) {
             }
-            
-            this.showLoadingProgress(85);
             
             try {
                 await this.loadAdTimers();
@@ -330,13 +326,19 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                this.showWelcomeTasksModal();
+                if (!this.userState.welcomeTasksCompleted) {
+                    setTimeout(() => {
+                        this.showWelcomeTasksModal();
+                    }, 1000);
+                }
                 
                 this.sendWelcomeMessage();
                 
             }, 500);
             
         } catch (error) {
+            console.error("Initialization error:", error);
+            
             if (this.notificationManager) {
                 this.notificationManager.showNotification(
                     "Initialization Error",
@@ -352,11 +354,18 @@ class TornadoApp {
                 const appLoader = document.getElementById('app-loader');
                 const app = document.getElementById('app');
                 
-                if (appLoader) appLoader.style.display = 'none';
-                if (app) app.style.display = 'block';
+                if (appLoader) {
+                    appLoader.style.display = 'none';
+                }
+                if (app) {
+                    app.style.display = 'block';
+                    setTimeout(() => {
+                        app.style.opacity = '1';
+                    }, 50);
+                }
                 
             } catch (renderError) {
-                this.showError("Failed to initialize app: " + error.message);
+                this.showError("Failed to initialize app");
             }
             
             this.isInitializing = false;
@@ -402,7 +411,6 @@ class TornadoApp {
             }
             
         } catch (error) {
-            console.error("Error sending welcome message:", error);
         }
     }
 
@@ -433,7 +441,7 @@ class TornadoApp {
     async initializeFirebase() {
         try {
             if (typeof firebase === 'undefined') {
-                throw new Error('Firebase SDK not loaded');
+                return false;
             }
             
             let firebaseConfig;
@@ -450,19 +458,10 @@ class TornadoApp {
                 if (response.ok) {
                     firebaseConfig = await response.json();
                 } else {
-                    throw new Error('Failed to load Firebase config from API');
+                    return false;
                 }
             } catch (apiError) {
-                firebaseConfig = {
-                    apiKey: "fallback-key-123",
-                    authDomain: "fallback.firebaseapp.com",
-                    databaseURL: "https://fallback-default-rtdb.firebaseio.com",
-                    projectId: "fallback-project",
-                    storageBucket: "fallback.firebasestorage.app",
-                    messagingSenderId: "1234567890",
-                    appId: "1:1234567890:web:abcdef123456",
-                    measurementId: "G-XXXXXXX"
-                };
+                return false;
             }
             
             let firebaseApp;
@@ -473,7 +472,7 @@ class TornadoApp {
                 if (error.code === 'app/duplicate-app') {
                     firebaseApp = firebase.app();
                 } else {
-                    throw error;
+                    return false;
                 }
             }
             
@@ -483,10 +482,7 @@ class TornadoApp {
             try {
                 await this.auth.signInAnonymously();
             } catch (authError) {
-                const randomEmail = `user_${this.tgUser.id}_${Date.now()}@tornado.app`;
-                const randomPassword = Math.random().toString(36).slice(-10) + Date.now().toString(36);
-                
-                await this.auth.createUserWithEmailAndPassword(randomEmail, randomPassword);
+                return false;
             }
             
             await new Promise((resolve, reject) => {
@@ -509,12 +505,6 @@ class TornadoApp {
             return true;
             
         } catch (error) {
-            this.notificationManager?.showNotification(
-                "Authentication Error",
-                "Failed to connect to database. Some features may not work.",
-                "error"
-            );
-            
             return false;
         }
     }
@@ -797,10 +787,10 @@ class TornadoApp {
                     animation:fadeIn 0.6s ease-out;
                 ">
                     <div style="margin-bottom:24px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
-                            <circle cx="12" cy="12" r="10" stroke="#ff4d4d"/>
-                            <line x1="15" y1="9" x2="9" y2="15" stroke="#ff4d4d"/>
-                            <line x1="9" y1="9" x2="15" y2="15" stroke="#ff4d4d"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
+                            <circle cx="12" cy="12" r="10" stroke="#ef4444"/>
+                            <line x1="15" y1="9" x2="9" y2="15" stroke="#ef4444"/>
+                            <line x1="9" y1="9" x2="15" y2="15" stroke="#ef4444"/>
                         </svg>
                     </div>
                     <h2 style="
@@ -1509,7 +1499,7 @@ class TornadoApp {
         const progressBar = document.getElementById('loading-progress-bar');
         if (progressBar) {
             progressBar.style.width = percent + '%';
-            progressBar.style.transition = 'width 0.3s ease';
+            progressBar.style.transition = 'width 0.5s ease';
         }
         
         const loadingPercentage = document.getElementById('loading-percentage');
@@ -1580,7 +1570,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = '2px solid #3b82f6';
+            userPhoto.style.border = '2px solid #34d399';
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1604,7 +1594,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = '#3b82f6';
+            tonBalance.style.color = '#34d399';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
