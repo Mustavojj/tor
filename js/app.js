@@ -253,11 +253,7 @@ class TornadoApp {
             
             this.showLoadingProgress(15);
             
-            const telegramVerified = await this.verifyTelegramUser();
-            if (!telegramVerified) {
-                this.showError("Telegram verification failed");
-                return;
-            }
+
             
             this.telegramVerified = true;
             
