@@ -16,10 +16,22 @@ const APP_CONFIG = {
         },
         {
             name: "Join Partner 1",
-            url: "https://t.me/Tornado_Chat",
-            channel: "@Tornado_Chat"
+            url: "https://t.me/MONEYHUB9_69",
+            channel: "@MONEYHUB9_69"
+        },
+        {
+            name: "Join Partner 2",
+            url: "https://t.me/Crypto_al2",
+            channel: "@Crypto_al2"
         }
-    ]
+    ],
+    WELCOME_MESSAGE: {
+        text: "⚡ Welcome to Tornado!",
+        buttons: [
+            {text: "Start App 💎", url: "https://t.me/Tornado_Rbot/start"},
+            {text: "Get News 📰", url: "https://t.me/Tornado_Channel"}
+        ]
+    }
 };
 
 import { CacheManager, NotificationManager, SecurityManager, AdManager } from './modules/core.js';
@@ -51,9 +63,9 @@ class TornadoApp {
         };
         
         this.pages = [
-            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#34d399' },
-            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#34d399' },
-            { id: 'profile-page', name: 'Profile', icon: 'fa-user', color: '#34d399' }
+            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#1e3a8a' },
+            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#1e3a8a' },
+            { id: 'profile-page', name: 'Profile', icon: 'user-photo', color: '#1e3a8a' }
         ];
         
         this.cache = new CacheManager();
@@ -103,7 +115,7 @@ class TornadoApp {
         this.serverTimeOffset = 0;
         this.timeSyncInterval = null;
         
-        this.welcomeMessageSent = new Set();
+        this.telegramVerified = false;
     }
 
     getRateLimiterClass() {
@@ -193,36 +205,63 @@ class TornadoApp {
         });
     }
 
+    async verifyTelegramUser() {
+        try {
+            if (!this.tg?.initData) {
+                return false;
+            }
+
+            const response = await fetch('/api/verify-telegram', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    initData: this.tg.initData
+                })
+            });
+
+            const result = await response.json();
+            return result.verified === true;
+        } catch (error) {
+            console.error('Telegram verification error:', error);
+            return false;
+        }
+    }
+
     async initialize() {
         if (this.isInitializing || this.isInitialized) return;
         
         this.isInitializing = true;
-        this.showLoadingProgress(5);
         
         try {
+            this.showLoadingProgress(5);
+            
             if (!window.Telegram || !window.Telegram.WebApp) {
-                setTimeout(() => {
-                    this.showError("Please open from Telegram Mini App");
-                }, 100);
-                this.isInitializing = false;
+                this.showError("Please open from Telegram Mini App");
                 return;
             }
             
             this.tg = window.Telegram.WebApp;
-            this.tg.ready();
-            this.tg.expand();
             
             if (!this.tg.initDataUnsafe || !this.tg.initDataUnsafe.user) {
-                setTimeout(() => {
-                    this.showError("User data not available");
-                }, 100);
-                this.isInitializing = false;
+                this.showError("User data not available");
                 return;
             }
             
             this.tgUser = this.tg.initDataUnsafe.user;
-            this.showLoadingProgress(20);
             
+            this.showLoadingProgress(15);
+            
+            const telegramVerified = await this.verifyTelegramUser();
+            if (!telegramVerified) {
+                this.showError("Telegram verification failed");
+                return;
+            }
+            
+            this.telegramVerified = true;
+            
+            this.showLoadingProgress(25);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
             if (!multiAccountAllowed) {
                 this.isInitializing = false;
@@ -230,6 +269,11 @@ class TornadoApp {
             }
             
             this.showLoadingProgress(30);
+            
+            this.tg.ready();
+            this.tg.expand();
+            
+            this.showLoadingProgress(35);
             this.setupTelegramTheme();
             
             this.notificationManager = new NotificationManager();
@@ -242,7 +286,7 @@ class TornadoApp {
                 this.setupFirebaseAuth();
             }
             
-            this.showLoadingProgress(60);
+            this.showLoadingProgress(50);
             
             await this.syncServerTime();
             
@@ -258,7 +302,7 @@ class TornadoApp {
                 return;
             }
             
-            this.showLoadingProgress(70);
+            this.showLoadingProgress(60);
             
             this.adManager = new AdManager(this);
             this.taskManager = new TaskManager(this);
@@ -267,27 +311,35 @@ class TornadoApp {
             
             this.startReferralMonitor();
             
-            this.showLoadingProgress(80);
+            this.showLoadingProgress(70);
             
             try {
                 await this.loadTasksData();
             } catch (taskError) {
             }
             
+            this.showLoadingProgress(75);
+            
             try {
                 await this.loadHistoryData();
             } catch (historyError) {
             }
+            
+            this.showLoadingProgress(80);
             
             try {
                 await this.loadAppStats();
             } catch (statsError) {
             }
             
+            this.showLoadingProgress(85);
+            
             try {
                 await this.loadAdTimers();
             } catch (adError) {
             }
+            
+            this.showLoadingProgress(90);
             
             this.renderUI();
             
@@ -326,19 +378,15 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                if (!this.userState.welcomeTasksCompleted) {
-                    setTimeout(() => {
-                        this.showWelcomeTasksModal();
-                    }, 1000);
-                }
+                this.showWelcomeTasksModal();
                 
-                this.sendWelcomeMessage();
+                if (this.userState.isNewUser) {
+                    this.sendWelcomeMessage();
+                }
                 
             }, 500);
             
         } catch (error) {
-            console.error("Initialization error:", error);
-            
             if (this.notificationManager) {
                 this.notificationManager.showNotification(
                     "Initialization Error",
@@ -354,18 +402,11 @@ class TornadoApp {
                 const appLoader = document.getElementById('app-loader');
                 const app = document.getElementById('app');
                 
-                if (appLoader) {
-                    appLoader.style.display = 'none';
-                }
-                if (app) {
-                    app.style.display = 'block';
-                    setTimeout(() => {
-                        app.style.opacity = '1';
-                    }, 50);
-                }
+                if (appLoader) appLoader.style.display = 'none';
+                if (app) app.style.display = 'block';
                 
             } catch (renderError) {
-                this.showError("Failed to initialize app");
+                this.showError("Failed to initialize app: " + error.message);
             }
             
             this.isInitializing = false;
@@ -374,43 +415,29 @@ class TornadoApp {
 
     async sendWelcomeMessage() {
         try {
-            const userId = this.tgUser.id;
-            
-            if (this.welcomeMessageSent.has(userId)) {
-                return;
-            }
-            
-            if (this.userState.createdAt) {
-                const userAge = Date.now() - this.userState.createdAt;
-                if (userAge > 300000) {
-                    this.welcomeMessageSent.add(userId);
-                    return;
-                }
-            }
-            
-            const message = `⚡ Welcome to Tornado!\n\nStart your journey with us!`;
-            const photoUrl = this.tgUser.photo_url || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png';
-            
-            const response = await fetch('/api/send-welcome', {
+            const response = await fetch('/api/send-telegram-message', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-telegram-user': userId.toString(),
-                    'x-telegram-auth': this.tg?.initData || ''
                 },
                 body: JSON.stringify({
-                    user_id: userId,
-                    first_name: this.tgUser.first_name,
-                    photo_url: photoUrl,
-                    message: message
+                    userId: this.tgUser.id,
+                    firstName: this.tgUser.first_name,
+                    photoUrl: this.tgUser.photo_url,
+                    messageConfig: this.appConfig.WELCOME_MESSAGE
                 })
             });
             
             if (response.ok) {
-                this.welcomeMessageSent.add(userId);
+                if (this.db) {
+                    await this.db.ref(`users/${this.tgUser.id}`).update({
+                        welcomeMessageSent: true,
+                        welcomeMessageSentAt: this.getServerTime()
+                    });
+                }
             }
-            
         } catch (error) {
+            console.error('Failed to send welcome message:', error);
         }
     }
 
@@ -441,7 +468,7 @@ class TornadoApp {
     async initializeFirebase() {
         try {
             if (typeof firebase === 'undefined') {
-                return false;
+                throw new Error('Firebase SDK not loaded');
             }
             
             let firebaseConfig;
@@ -458,10 +485,19 @@ class TornadoApp {
                 if (response.ok) {
                     firebaseConfig = await response.json();
                 } else {
-                    return false;
+                    throw new Error('Failed to load Firebase config from API');
                 }
             } catch (apiError) {
-                return false;
+                firebaseConfig = {
+                    apiKey: "fallback-key-123",
+                    authDomain: "fallback.firebaseapp.com",
+                    databaseURL: "https://fallback-default-rtdb.firebaseio.com",
+                    projectId: "fallback-project",
+                    storageBucket: "fallback.firebasestorage.app",
+                    messagingSenderId: "1234567890",
+                    appId: "1:1234567890:web:abcdef123456",
+                    measurementId: "G-XXXXXXX"
+                };
             }
             
             let firebaseApp;
@@ -472,7 +508,7 @@ class TornadoApp {
                 if (error.code === 'app/duplicate-app') {
                     firebaseApp = firebase.app();
                 } else {
-                    return false;
+                    throw error;
                 }
             }
             
@@ -482,7 +518,10 @@ class TornadoApp {
             try {
                 await this.auth.signInAnonymously();
             } catch (authError) {
-                return false;
+                const randomEmail = `user_${this.tgUser.id}_${Date.now()}@tornado.app`;
+                const randomPassword = Math.random().toString(36).slice(-10) + Date.now().toString(36);
+                
+                await this.auth.createUserWithEmailAndPassword(randomEmail, randomPassword);
             }
             
             await new Promise((resolve, reject) => {
@@ -505,6 +544,12 @@ class TornadoApp {
             return true;
             
         } catch (error) {
+            this.notificationManager?.showNotification(
+                "Authentication Error",
+                "Failed to connect to database. Some features may not work.",
+                "error"
+            );
+            
             return false;
         }
     }
@@ -547,7 +592,8 @@ class TornadoApp {
                     firebaseUid: firebaseUid,
                     telegramId: telegramId,
                     createdAt: this.getServerTime(),
-                    lastSynced: this.getServerTime()
+                    lastSynced: this.getServerTime(),
+                    isNewUser: true
                 };
                 
                 await userRef.set(userData);
@@ -647,7 +693,9 @@ class TornadoApp {
             status: 'free',
             lastUpdated: this.getServerTime(),
             firebaseUid: this.auth?.currentUser?.uid || null,
-            welcomeTasksCompleted: false
+            welcomeTasksCompleted: false,
+            isNewUser: false,
+            totalWithdrawnAmount: 0
         };
     }
 
@@ -715,7 +763,9 @@ class TornadoApp {
             referralState: referralId ? 'pending' : null,
             firebaseUid: this.auth?.currentUser?.uid || null,
             welcomeTasksCompleted: false,
-            welcomeTasksCompletedAt: null
+            welcomeTasksCompletedAt: null,
+            isNewUser: true,
+            totalWithdrawnAmount: 0
         };
         
         await userRef.set(userData);
@@ -787,10 +837,10 @@ class TornadoApp {
                     animation:fadeIn 0.6s ease-out;
                 ">
                     <div style="margin-bottom:24px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
-                            <circle cx="12" cy="12" r="10" stroke="#ef4444"/>
-                            <line x1="15" y1="9" x2="9" y2="15" stroke="#ef4444"/>
-                            <line x1="9" y1="9" x2="15" y2="15" stroke="#ef4444"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
+                            <circle cx="12" cy="12" r="10" stroke="#ff4d4d"/>
+                            <line x1="15" y1="9" x2="9" y2="15" stroke="#ff4d4d"/>
+                            <line x1="9" y1="9" x2="15" y2="15" stroke="#ff4d4d"/>
                         </svg>
                     </div>
                     <h2 style="
@@ -860,12 +910,13 @@ class TornadoApp {
             totalAds: userData.totalAds || 0,
             totalPromoCodes: userData.totalPromoCodes || 0,
             totalTasksCompleted: userData.totalTasksCompleted || 0,
-            giveawayTickets: userData.giveawayTickets || 0,
             balance: userData.balance || 0,
             referrals: userData.referrals || 0,
             firebaseUid: this.auth?.currentUser?.uid || userData.firebaseUid || null,
             welcomeTasksCompleted: userData.welcomeTasksCompleted || false,
-            welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null
+            welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null,
+            isNewUser: userData.isNewUser || false,
+            totalWithdrawnAmount: userData.totalWithdrawnAmount || 0
         };
         
         const updates = {};
@@ -949,7 +1000,6 @@ class TornadoApp {
                 this.userState.totalEarned = newTotalEarned;
                 
                 this.updateHeader();
-                this.renderProfilePage();
             }
             
             await this.refreshReferralsList();
@@ -1001,7 +1051,6 @@ class TornadoApp {
                 this.userState.totalEarned = newTotalEarned;
                 
                 this.updateHeader();
-                this.renderProfilePage();
             }
             
         } catch (error) {
@@ -1357,7 +1406,8 @@ class TornadoApp {
                 welcomeTasksCompletedAt: currentTime,
                 welcomeTasksVerifiedAt: currentTime,
                 referralState: 'verified',
-                lastUpdated: currentTime
+                lastUpdated: currentTime,
+                isNewUser: false
             };
             
             if (this.db) {
@@ -1375,6 +1425,7 @@ class TornadoApp {
             this.userState.welcomeTasksCompletedAt = currentTime;
             this.userState.welcomeTasksVerifiedAt = currentTime;
             this.userState.referralState = 'verified';
+            this.userState.isNewUser = false;
             
             if (this.pendingReferralAfterWelcome && this.pendingReferralAfterWelcome !== this.tgUser.id) {
                 await this.processReferralRegistrationWithBonus(this.pendingReferralAfterWelcome, this.tgUser.id);
@@ -1436,8 +1487,6 @@ class TornadoApp {
                 if (document.getElementById('referrals-page')?.classList.contains('active')) {
                     this.renderReferralsPage();
                 }
-                
-                this.renderProfilePage();
             }
             
         } catch (error) {
@@ -1499,7 +1548,7 @@ class TornadoApp {
         const progressBar = document.getElementById('loading-progress-bar');
         if (progressBar) {
             progressBar.style.width = percent + '%';
-            progressBar.style.transition = 'width 0.5s ease';
+            progressBar.style.transition = 'width 0.3s ease';
         }
         
         const loadingPercentage = document.getElementById('loading-percentage');
@@ -1570,7 +1619,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = '2px solid #34d399';
+            userPhoto.style.border = '2px solid #1e3a8a';
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1594,7 +1643,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = '#34d399';
+            tonBalance.style.color = '#1e3a8a';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -1682,14 +1731,7 @@ class TornadoApp {
                     </button>
                 </div>
                 
-                <div id="social-tab" class="tasks-tab-content active">
-                    <div class="add-task-card">
-                        <button class="add-task-btn" id="add-task-btn">
-                            <i class="fas fa-plus-circle"></i> Add New Task
-                        </button>
-                    </div>
-                    <div id="social-tasks-list"></div>
-                </div>
+                <div id="social-tab" class="tasks-tab-content active"></div>
                 <div id="partner-tab" class="tasks-tab-content"></div>
                 <div id="more-tab" class="tasks-tab-content">
                     <div class="promo-card">
@@ -1733,266 +1775,7 @@ class TornadoApp {
             this.setupPromoCodeEvents();
             this.setupAdWatchEvents();
             this.startAdTimers();
-            this.setupAddTaskEvent();
         }, 100);
-    }
-
-    setupAddTaskEvent() {
-        const addTaskBtn = document.getElementById('add-task-btn');
-        if (addTaskBtn) {
-            addTaskBtn.addEventListener('click', () => {
-                this.showAddTaskModal();
-            });
-        }
-    }
-
-    showAddTaskModal() {
-        const modal = document.createElement('div');
-        modal.className = 'add-task-modal';
-        
-        modal.innerHTML = `
-            <div class="add-task-content">
-                <div class="add-task-header">
-                    <h3><i class="fas fa-plus-circle"></i> Add New Task</h3>
-                    <button class="close-add-task">&times;</button>
-                </div>
-                
-                <div class="add-task-form">
-                    <div class="form-group">
-                        <label><i class="fas fa-heading"></i> Task Name (Max 20 chars)</label>
-                        <input type="text" id="task-name-input" class="form-input" 
-                               placeholder="Enter task name" maxlength="20">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-link"></i> Task Link</label>
-                        <input type="text" id="task-link-input" class="form-input" 
-                               placeholder="https://t.me/...">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-bullseye"></i> Task Target</label>
-                        <select id="task-target-select" class="form-select">
-                            <option value="100">100</option>
-                            <option value="250">250</option>
-                            <option value="500">500</option>
-                            <option value="1000">1000</option>
-                            <option value="2500">2500</option>
-                            <option value="5000">5000</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-check-circle"></i> Task Check</label>
-                        <div class="check-options">
-                            <button class="check-btn" data-check="false">❌ Disabled</button>
-                            <button class="check-btn" data-check="true">✅ Enabled</button>
-                        </div>
-                        <div class="check-note" id="check-note" style="display: none;">
-                            <i class="fas fa-info-circle"></i> You must add bot as admin
-                        </div>
-                    </div>
-                    
-                    <div class="task-price-info">
-                        <div class="price-label">Price per 1000:</div>
-                        <div class="price-amount">1.00 TON</div>
-                    </div>
-                    
-                    <div class="total-price">
-                        <div class="total-label">Total Price:</div>
-                        <div class="total-amount" id="total-price-amount">0.10 TON</div>
-                    </div>
-                    
-                    <button class="confirm-add-task" id="confirm-add-task-btn" disabled>
-                        <i class="fas fa-check"></i> Confirm & Pay <span id="pay-amount">0.10</span> TON
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        const closeBtn = modal.querySelector('.close-add-task');
-        const checkBtns = modal.querySelectorAll('.check-btn');
-        const targetSelect = modal.getElementById('task-target-select');
-        const confirmBtn = modal.getElementById('confirm-add-task-btn');
-        const taskNameInput = modal.getElementById('task-name-input');
-        const taskLinkInput = modal.getElementById('task-link-input');
-        
-        closeBtn.addEventListener('click', () => {
-            modal.remove();
-        });
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-        
-        checkBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                checkBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const checkNote = modal.getElementById('check-note');
-                if (btn.dataset.check === 'true') {
-                    checkNote.style.display = 'block';
-                } else {
-                    checkNote.style.display = 'none';
-                }
-                
-                this.updateAddTaskButton(modal);
-            });
-        });
-        
-        if (targetSelect) {
-            targetSelect.addEventListener('change', () => {
-                this.updateAddTaskButton(modal);
-            });
-        }
-        
-        if (taskNameInput && taskLinkInput) {
-            taskNameInput.addEventListener('input', () => this.updateAddTaskButton(modal));
-            taskLinkInput.addEventListener('input', () => this.updateAddTaskButton(modal));
-        }
-        
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', async () => {
-                await this.handleAddTask(modal);
-            });
-        }
-        
-        this.updateAddTaskButton(modal);
-    }
-    
-    updateAddTaskButton(modal) {
-        const taskNameInput = modal.getElementById('task-name-input');
-        const taskLinkInput = modal.getElementById('task-link-input');
-        const targetSelect = modal.getElementById('task-target-select');
-        const confirmBtn = modal.getElementById('confirm-add-task-btn');
-        const checkNote = modal.getElementById('check-note');
-        const totalAmount = modal.getElementById('total-price-amount');
-        const payAmount = modal.getElementById('pay-amount');
-        
-        if (!taskNameInput || !taskLinkInput || !targetSelect || !confirmBtn) return;
-        
-        const taskName = taskNameInput.value.trim();
-        const taskLink = taskLinkInput.value.trim();
-        const target = parseInt(targetSelect.value) || 100;
-        const pricePer1000 = 1.00;
-        const totalPrice = (target / 1000) * pricePer1000;
-        
-        if (totalAmount) totalAmount.textContent = `${totalPrice.toFixed(2)} TON`;
-        if (payAmount) payAmount.textContent = totalPrice.toFixed(2);
-        
-        const checkEnabled = modal.querySelector('.check-btn[data-check="true"]')?.classList.contains('active');
-        
-        let canConfirm = taskName.length >= 3 && taskLink.length > 10 && taskLink.includes('t.me/');
-        
-        if (checkEnabled) {
-            const chatId = this.extractChatIdFromUrl(taskLink);
-            if (chatId) {
-                const isBotAdmin = this.taskManager ? this.taskManager.checkBotAdminStatus(chatId) : false;
-                if (!isBotAdmin) {
-                    checkNote.innerHTML = '<i class="fas fa-exclamation-triangle"></i> You must add bot as admin';
-                    checkNote.style.color = '#ef4444';
-                    canConfirm = false;
-                } else {
-                    checkNote.innerHTML = '<i class="fas fa-check-circle"></i> Bot is admin';
-                    checkNote.style.color = '#16a34a';
-                }
-            }
-        }
-        
-        const userBalance = this.safeNumber(this.userState.balance);
-        if (userBalance < totalPrice) {
-            canConfirm = false;
-            if (confirmBtn) {
-                confirmBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Insufficient balance`;
-            }
-        }
-        
-        confirmBtn.disabled = !canConfirm;
-        if (canConfirm) {
-            confirmBtn.innerHTML = `<i class="fas fa-check"></i> Confirm & Pay ${totalPrice.toFixed(2)} TON`;
-        } else if (userBalance >= totalPrice) {
-            confirmBtn.innerHTML = `<i class="fas fa-check"></i> Confirm & Pay ${totalPrice.toFixed(2)} TON`;
-        }
-    }
-    
-    async handleAddTask(modal) {
-        const taskNameInput = modal.getElementById('task-name-input');
-        const taskLinkInput = modal.getElementById('task-link-input');
-        const targetSelect = modal.getElementById('task-target-select');
-        const confirmBtn = modal.getElementById('confirm-add-task-btn');
-        
-        if (!taskNameInput || !taskLinkInput || !targetSelect || !confirmBtn) return;
-        
-        const taskName = taskNameInput.value.trim();
-        const taskLink = taskLinkInput.value.trim();
-        const target = parseInt(targetSelect.value) || 100;
-        const checkEnabled = modal.querySelector('.check-btn[data-check="true"]')?.classList.contains('active');
-        const pricePer1000 = 1.00;
-        const totalPrice = (target / 1000) * pricePer1000;
-        
-        if (this.userState.balance < totalPrice) {
-            this.notificationManager.showNotification("Error", "Insufficient balance", "error");
-            return;
-        }
-        
-        const originalText = confirmBtn.innerHTML;
-        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        confirmBtn.disabled = true;
-        
-        try {
-            if (this.taskManager) {
-                const success = await this.taskManager.addNewTask({
-                    name: taskName,
-                    url: taskLink,
-                    target: target,
-                    checkEnabled: checkEnabled,
-                    price: totalPrice
-                });
-                
-                if (success) {
-                    modal.remove();
-                    this.notificationManager.showNotification("Success", "Task added successfully!", "success");
-                    this.renderTasksPage();
-                } else {
-                    confirmBtn.innerHTML = originalText;
-                    confirmBtn.disabled = false;
-                }
-            }
-        } catch (error) {
-            this.notificationManager.showNotification("Error", "Failed to add task", "error");
-            confirmBtn.innerHTML = originalText;
-            confirmBtn.disabled = false;
-        }
-    }
-    
-    extractChatIdFromUrl(url) {
-        try {
-            if (!url) return null;
-            
-            url = url.toString().trim();
-            
-            if (url.includes('t.me/')) {
-                const match = url.match(/t\.me\/([^\/\?]+)/);
-                if (match && match[1]) {
-                    const username = match[1];
-                    
-                    if (username.startsWith('@')) return username;
-                    
-                    if (/^[a-zA-Z][a-zA-Z0-9_]{4,}$/.test(username)) return '@' + username;
-                    
-                    return username;
-                }
-            }
-            
-            return null;
-        } catch (error) {
-            return null;
-        }
     }
 
     setupTasksTabs() {
@@ -2039,30 +1822,18 @@ class TornadoApp {
             if (socialTasks.length > 0) {
                 const tasksHTML = socialTasks.map(task => this.renderTaskCard(task)).join('');
                 socialTab.innerHTML = `
-                    <div class="add-task-card">
-                        <button class="add-task-btn" id="add-task-btn">
-                            <i class="fas fa-plus-circle"></i> Add New Task
-                        </button>
-                    </div>
                     <div class="referrals-list">
                         ${tasksHTML}
                     </div>
                 `;
                 this.setupTaskButtons();
-                this.setupAddTaskEvent();
             } else {
                 socialTab.innerHTML = `
-                    <div class="add-task-card">
-                        <button class="add-task-btn" id="add-task-btn">
-                            <i class="fas fa-plus-circle"></i> Add New Task
-                        </button>
-                    </div>
                     <div class="no-tasks">
                         <i class="fas fa-users"></i>
                         <p>No social tasks available now</p>
                     </div>
                 `;
-                this.setupAddTaskEvent();
             }
         } catch (error) {
             socialTab.innerHTML = `
@@ -2112,7 +1883,7 @@ class TornadoApp {
 
     renderTaskCard(task) {
         const isCompleted = this.userCompletedTasks.has(task.id);
-        const defaultIcon = 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png';
+        const defaultIcon = 'https://i.ibb.co/GvWFRrnp/ninja.png';
         
         let buttonText = 'Start';
         let buttonClass = 'start';
@@ -2270,7 +2041,6 @@ class TornadoApp {
             this.cache.delete(`user_${this.tgUser.id}`);
             
             this.updateHeader();
-            this.renderProfilePage();
             promoInput.value = '';
             
             this.notificationManager.showNotification("Success", `Promo code applied! +${reward.toFixed(3)} TON`, "success");
@@ -2401,7 +2171,6 @@ class TornadoApp {
                 this.cache.delete(`user_${this.tgUser.id}`);
                 
                 this.updateHeader();
-                this.renderProfilePage();
                 this.updateAdButtons();
                 
                 this.notificationManager.showNotification("Success", `+${reward} TON`, "success");
@@ -2449,11 +2218,11 @@ class TornadoApp {
         setInterval(() => this.updateAdButtons(), 1000);
     }
 
-    renderReferralsPage() {
+    async renderReferralsPage() {
         const referralsPage = document.getElementById('referrals-page');
         if (!referralsPage) return;
         
-        const referralLink = `https://t.me/${this.appConfig.BOT_USERNAME}/tornado?startapp=${this.tgUser.id}`;
+        const referralLink = `https://t.me/Tornado_Rbot/start?startapp=${this.tgUser.id}`;
         const referrals = this.safeNumber(this.userState.referrals || 0);
         const referralEarnings = this.safeNumber(this.userState.referralEarnings || 0);
         
@@ -2578,7 +2347,7 @@ class TornadoApp {
         const copyBtn = document.getElementById('copy-referral-link-btn');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
-                const referralLink = `https://t.me/${this.appConfig.BOT_USERNAME}/tornado?startapp=${this.tgUser.id}`;
+                const referralLink = `https://t.me/Tornado_Rbot/start?startapp=${this.tgUser.id}`;
                 this.copyToClipboard(referralLink);
                 
                 copyBtn.classList.add('copied');
@@ -2627,113 +2396,95 @@ class TornadoApp {
         const profilePage = document.getElementById('profile-page');
         if (!profilePage) return;
         
-        const totalWithdrawalAmount = this.userWithdrawals
-            .filter(w => w.status === 'completed')
-            .reduce((sum, w) => sum + this.safeNumber(w.amount || w.tonAmount || 0), 0);
-        
-        const joinedDate = this.userState.createdAt ? new Date(this.userState.createdAt) : new Date();
-        const formattedDate = `${joinedDate.getDate().toString().padStart(2, '0')}/${(joinedDate.getMonth() + 1).toString().padStart(2, '0')}/${joinedDate.getFullYear()}`;
-        const formattedTime = `${joinedDate.getHours().toString().padStart(2, '0')}:${joinedDate.getMinutes().toString().padStart(2, '0')}`;
+        const joinDate = new Date(this.userState.createdAt || this.getServerTime());
+        const formattedDate = this.formatDate(joinDate);
+        const formattedTime = this.formatTime24(joinDate);
         
         profilePage.innerHTML = `
             <div class="profile-container">
-                <div class="profile-header">
+                <div class="profile-header-section">
                     <div class="profile-avatar-large">
                         <img src="${this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
-                             alt="User" 
-                             oncontextmenu="return false;" 
+                             alt="${this.userState.firstName}"
+                             oncontextmenu="return false;"
                              ondragstart="return false;">
                     </div>
-                    <div class="profile-name">${this.userState.username || 'No Username'}</div>
+                    <div class="profile-username">${this.userState.username}</div>
+                    <div class="profile-balance-display">
+                        <i class="fas fa-gem"></i>
+                        <span class="balance-amount-large">${this.safeNumber(this.userState.balance).toFixed(5)} TON</span>
+                    </div>
                 </div>
                 
-                <div class="profile-stats">
+                <div class="profile-stats-section">
+                    <h3><i class="fas fa-chart-line"></i> Statistics</h3>
                     <div class="stats-grid">
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-calendar-day"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Joined at</div>
-                                <div class="stat-value">${formattedDate} ${formattedTime}</div>
+                            <div class="stat-info">
+                                <h4>Joined at</h4>
+                                <p class="stat-value">${formattedDate} ${formattedTime}</p>
                             </div>
                         </div>
                         
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-ad"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Watched Ads</div>
-                                <div class="stat-value">${this.userState.totalAds || 0}</div>
+                            <div class="stat-info">
+                                <h4>Watched Ads</h4>
+                                <p class="stat-value">${this.userState.totalAds || 0}</p>
                             </div>
                         </div>
                         
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-users"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Total Referrals</div>
-                                <div class="stat-value">${this.userState.referrals || 0}</div>
+                            <div class="stat-info">
+                                <h4>Total Referrals</h4>
+                                <p class="stat-value">${this.userState.referrals || 0}</p>
                             </div>
                         </div>
                         
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-wallet"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Total Withdrawals</div>
-                                <div class="stat-value">${totalWithdrawalAmount.toFixed(3)} TON</div>
+                            <div class="stat-info">
+                                <h4>Total Withdrawals</h4>
+                                <p class="stat-value">${this.safeNumber(this.userState.totalWithdrawnAmount).toFixed(5)} TON</p>
                             </div>
                         </div>
                         
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
-                                <i class="fas fa-chart-line"></i>
+                                <i class="fas fa-coins"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Total Earnings</div>
-                                <div class="stat-value">${this.safeNumber(this.userState.totalEarned).toFixed(3)} TON</div>
+                            <div class="stat-info">
+                                <h4>Total Earnings</h4>
+                                <p class="stat-value">${this.safeNumber(this.userState.totalEarned).toFixed(5)} TON</p>
                             </div>
                         </div>
                         
-                        <div class="stat-item">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-tasks"></i>
                             </div>
-                            <div class="stat-content">
-                                <div class="stat-label">Tasks Completed</div>
-                                <div class="stat-value">${this.userState.totalTasksCompleted || 0}</div>
+                            <div class="stat-info">
+                                <h4>Tasks Completed</h4>
+                                <p class="stat-value">${this.userState.totalTasksCompleted || 0}</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="wallet-section">
-                    <div class="wallet-header">
-                        <h3><i class="fas fa-wallet"></i> Wallet</h3>
-                    </div>
-                    
-                    <div class="wallet-balance-card">
-                        <div class="balance-icon">
-                            <i class="fas fa-gem"></i>
-                        </div>
-                        <div class="balance-info">
-                            <div class="balance-label">Current Balance</div>
-                            <div class="balance-amount">${this.safeNumber(this.userState.balance).toFixed(5)} TON</div>
-                        </div>
-                    </div>
-                    
-                    <div class="wallet-actions">
-                        <button class="wallet-btn deposit" id="deposit-btn">
-                            <i class="fas fa-arrow-down"></i> Deposit
-                        </button>
-                        <button class="wallet-btn withdraw" id="withdraw-btn">
-                            <i class="fas fa-arrow-up"></i> Withdraw
-                        </button>
-                    </div>
+                <div class="profile-actions-section">
+                    <button id="withdraw-btn" class="withdraw-btn">
+                        <i class="fas fa-paper-plane"></i> WITHDRAW
+                    </button>
                 </div>
             </div>
         `;
@@ -2742,131 +2493,63 @@ class TornadoApp {
     }
 
     setupProfilePageEvents() {
-        const depositBtn = document.getElementById('deposit-btn');
         const withdrawBtn = document.getElementById('withdraw-btn');
         
-        if (depositBtn) {
-            depositBtn.addEventListener('click', () => {
-                this.showDepositModal();
-            });
-        }
-        
         if (withdrawBtn) {
-            withdrawBtn.addEventListener('click', () => {
-                this.showWithdrawModal();
+            withdrawBtn.addEventListener('click', async () => {
+                await this.showWithdrawModal();
             });
         }
     }
-
-    showDepositModal() {
+    
+    async showWithdrawModal() {
         const modal = document.createElement('div');
-        modal.className = 'wallet-modal';
-        
-        modal.innerHTML = `
-            <div class="wallet-modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-arrow-down"></i> Deposit TON</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                
-                <div class="modal-body">
-                    <div class="wallet-address-card">
-                        <div class="address-label">Send TON to this address:</div>
-                        <div class="address-value" id="deposit-address">UQCMATcdykmpWDSLdI5ob-NScl55FSna3OOVy1l3i_2ICcPZ</div>
-                        <button class="copy-address-btn" id="copy-deposit-btn">
-                            <i class="far fa-copy"></i> Copy Address
-                        </button>
-                    </div>
-                    
-                    <div class="deposit-info">
-                        <div class="info-item">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Minimum deposit: <strong>0.10 TON</strong></span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Processing time: <strong>1-3 minutes</strong></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        const closeBtn = modal.querySelector('.close-modal');
-        const copyBtn = modal.getElementById('copy-deposit-btn');
-        
-        closeBtn.addEventListener('click', () => modal.remove());
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-        
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                const address = document.getElementById('deposit-address').textContent;
-                this.copyToClipboard(address);
-                
-                copyBtn.classList.add('copied');
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                setTimeout(() => {
-                    copyBtn.classList.remove('copied');
-                    copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy Address';
-                }, 2000);
-            });
-        }
-    }
-
-    showWithdrawModal() {
-        const modal = document.createElement('div');
-        modal.className = 'wallet-modal';
+        modal.className = 'withdraw-modal';
         
         const userBalance = this.safeNumber(this.userState.balance);
-        const canWithdraw = userBalance >= this.appConfig.MINIMUM_WITHDRAW;
+        const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
         
         modal.innerHTML = `
-            <div class="wallet-modal-content">
+            <div class="withdraw-modal-content">
                 <div class="modal-header">
-                    <h3><i class="fas fa-arrow-up"></i> Withdraw TON</h3>
+                    <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
                     <button class="close-modal">&times;</button>
                 </div>
                 
                 <div class="modal-body">
                     <div class="form-group">
-                        <label><i class="fas fa-wallet"></i> TON Wallet Address</label>
-                        <input type="text" id="withdraw-address" class="form-input" 
-                               placeholder="Enter your TON wallet address (UQ...)">
+                        <label class="form-label" for="modal-wallet-input">
+                            <i class="fas fa-wallet"></i> TON Wallet Address
+                        </label>
+                        <input type="text" id="modal-wallet-input" class="form-input" 
+                               placeholder="Enter your TON wallet address (UQ...)"
+                               required>
                     </div>
                     
                     <div class="form-group">
-                        <label><i class="fas fa-gem"></i> Amount (TON)</label>
-                        <input type="number" id="withdraw-amount" class="form-input" 
-                               step="0.001" min="${this.appConfig.MINIMUM_WITHDRAW}" max="${userBalance}"
-                               value="${this.appConfig.MINIMUM_WITHDRAW}">
-                        <div class="input-hint">Available: ${userBalance.toFixed(3)} TON</div>
+                        <label class="form-label" for="modal-amount-input">
+                            <i class="fas fa-gem"></i> Withdrawal Amount
+                        </label>
+                        <input type="number" id="modal-amount-input" class="form-input" 
+                               step="0.00001" min="${minimumWithdraw}" max="${userBalance}"
+                               placeholder="Minimum: ${minimumWithdraw} TON"
+                               required>
                     </div>
                     
-                    <div class="withdraw-info">
-                        <div class="info-item">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Minimum: <strong>${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON</strong></span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-clock"></i>
-                            <span>Processing: <strong>1-24 hours</strong></span>
-                        </div>
+                    <div class="withdraw-minimum-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Minimum Withdrawal: <strong>${minimumWithdraw.toFixed(3)} TON</strong></span>
                     </div>
                     
-                    <button class="withdraw-submit-btn" id="submit-withdraw" ${!canWithdraw ? 'disabled' : ''}>
-                        <i class="fas fa-paper-plane"></i> Submit Withdrawal
+                    <div class="current-balance-info">
+                        <i class="fas fa-coins"></i>
+                        <span>Your Balance: <strong>${userBalance.toFixed(5)} TON</strong></span>
+                    </div>
+                    
+                    <button id="modal-withdraw-btn" class="modal-withdraw-btn" 
+                            ${userBalance < minimumWithdraw ? 'disabled' : ''}>
+                        <i class="fas fa-paper-plane"></i> WITHDRAW NOW
                     </button>
-                    
-                    ${!canWithdraw ? `
-                        <div class="insufficient-balance">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Minimum withdrawal amount is ${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON
-                        </div>
-                    ` : ''}
                 </div>
             </div>
         `;
@@ -2874,51 +2557,57 @@ class TornadoApp {
         document.body.appendChild(modal);
         
         const closeBtn = modal.querySelector('.close-modal');
-        const submitBtn = modal.getElementById('submit-withdraw');
-        const amountInput = modal.getElementById('withdraw-amount');
+        const withdrawBtn = modal.querySelector('#modal-withdraw-btn');
+        const walletInput = modal.querySelector('#modal-wallet-input');
+        const amountInput = modal.querySelector('#modal-amount-input');
         
-        closeBtn.addEventListener('click', () => modal.remove());
+        closeBtn.addEventListener('click', () => {
+            modal.remove();
+        });
+        
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
+            if (e.target === modal) {
+                modal.remove();
+            }
         });
         
         if (amountInput) {
             amountInput.addEventListener('input', () => {
+                const max = this.safeNumber(this.userState.balance);
                 const value = parseFloat(amountInput.value) || 0;
-                if (value > userBalance) {
-                    amountInput.value = userBalance.toFixed(3);
+                
+                if (value > max) {
+                    amountInput.value = max.toFixed(5);
                 }
             });
         }
         
-        if (submitBtn) {
-            submitBtn.addEventListener('click', async () => {
-                await this.processWithdrawal(modal);
+        if (withdrawBtn) {
+            withdrawBtn.addEventListener('click', async () => {
+                await this.handleWithdrawal(walletInput, amountInput, withdrawBtn, modal);
             });
         }
     }
-
-    async processWithdrawal(modal) {
-        const addressInput = modal.getElementById('withdraw-address');
-        const amountInput = modal.getElementById('withdraw-amount');
-        const submitBtn = modal.getElementById('submit-withdraw');
+    
+    async handleWithdrawal(walletInput, amountInput, withdrawBtn, modal) {
+        if (!walletInput || !amountInput || !withdrawBtn) return;
         
-        if (!addressInput || !amountInput || !submitBtn) return;
-        
-        const walletAddress = addressInput.value.trim();
+        const walletAddress = walletInput.value.trim();
         const amount = parseFloat(amountInput.value);
+        const userBalance = this.safeNumber(this.userState.balance);
+        const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
         
         if (!walletAddress || walletAddress.length < 20) {
             this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
             return;
         }
         
-        if (!amount || amount < this.appConfig.MINIMUM_WITHDRAW) {
-            this.notificationManager.showNotification("Error", `Minimum withdrawal is ${this.appConfig.MINIMUM_WITHDRAW} TON`, "error");
+        if (!amount || amount < minimumWithdraw) {
+            this.notificationManager.showNotification("Error", `Minimum withdrawal is ${minimumWithdraw} TON`, "error");
             return;
         }
         
-        if (amount > this.userState.balance) {
+        if (amount > userBalance) {
             this.notificationManager.showNotification("Error", "Insufficient balance", "error");
             return;
         }
@@ -2963,29 +2652,31 @@ class TornadoApp {
             }
         }
         
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        const originalText = withdrawBtn.innerHTML;
+        withdrawBtn.disabled = true;
+        withdrawBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         
         try {
             if (this.adManager) {
                 const adShown = await this.adManager.showWithdrawalAd();
                 if (!adShown) {
                     this.notificationManager.showNotification("Ad Required", "Please watch the ad to process withdrawal", "info");
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
+                    withdrawBtn.disabled = false;
+                    withdrawBtn.innerHTML = originalText;
                     return;
                 }
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            const newBalance = this.userState.balance - amount;
+            const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
+            const newTotalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
+                    totalWithdrawnAmount: newTotalWithdrawnAmount,
                     lastWithdrawalDate: currentTime
                 });
                 
@@ -3004,6 +2695,7 @@ class TornadoApp {
             
             this.userState.balance = newBalance;
             this.userState.totalWithdrawals = this.safeNumber(this.userState.totalWithdrawals) + 1;
+            this.userState.totalWithdrawnAmount = newTotalWithdrawnAmount;
             this.userState.lastWithdrawalDate = currentTime;
             
             this.cache.delete(`user_${this.tgUser.id}`);
@@ -3013,18 +2705,22 @@ class TornadoApp {
             
             await this.loadHistoryData();
             
-            modal.remove();
+            walletInput.value = '';
+            amountInput.value = '';
             
             this.updateHeader();
             this.renderProfilePage();
             
             this.notificationManager.showNotification("Success", "Withdrawal request submitted!", "success");
             
+            if (modal) {
+                modal.remove();
+            }
+            
         } catch (error) {
             this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            withdrawBtn.disabled = false;
+            withdrawBtn.innerHTML = originalText;
         }
     }
 
@@ -3044,6 +2740,21 @@ class TornadoApp {
                 this.isCopying = false;
             }, 1000);
         });
+    }
+
+    formatDate(timestamp) {
+        const date = new Date(timestamp);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    formatTime24(timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
     }
 
     setupEventListeners() {
