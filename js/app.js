@@ -1644,6 +1644,11 @@ class TornadoApp {
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
         }
+        
+        const bottomNavPhoto = document.getElementById('bottom-nav-user-photo');
+        if (bottomNavPhoto && this.userState.photo_url) {
+    bottomNavPhoto.src = this.userState.photo_url;
+}
     }
 
     renderUI() {
@@ -2400,7 +2405,7 @@ class TornadoApp {
             <div class="profile-container">
                 <div class="profile-header-section">
                     <div class="profile-avatar-large">
-                        <img src="${this.tgUser.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
+                        <img src="${this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
                              alt="${this.userState.firstName}"
                              oncontextmenu="return false;"
                              ondragstart="return false;">
