@@ -2655,3 +2655,37 @@ html {
     grid-column: 1 / -1;
     aspect-ratio: 0.5; /* أصغر ارتفاع */
 } 
+
+    /* تصغير ارتفاع بطاقة Promo codes فقط */
+.square-card:first-child {
+    grid-column: 1 / -1;
+    aspect-ratio: 2; /* أصغر ارتفاع (الارتفاع نصف العرض) */
+    padding: 10px; /* تصغير الحشو الداخلي */
+}
+
+/* تصغير محتويات بطاقة Promo codes */
+.promo-header {
+    margin-bottom: 8px;
+}
+
+.promo-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+    margin: 0 auto 6px;
+}
+
+.promo-header h3 {
+    font-size: 0.85rem;
+}
+
+.promo-input {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+}
+
+.promo-btn {
+    padding: 8px;
+    font-size: 0.75rem;
+    }
