@@ -8,6 +8,8 @@ const APP_CONFIG = {
     TASK_REWARD_BONUS: 0,
     MAX_DAILY_ADS: 999999,
     AD_COOLDOWN: 600000,
+    DEFAULT_USER_AVATAR: "https://cdn-icons-png.flaticon.com/512/9195/9195920.png",
+    BOT_AVATAR: "https://i.ibb.co/GvWFRrnp/ninja.png",
     WELCOME_TASKS: [
         {
             name: "Join Official Channel",
@@ -88,7 +90,8 @@ class TornadoApp {
         this.referralBonusGiven = new Set();
         
         this.adTimers = {
-            ad1: 0
+            ad1: 0,
+            ad2: 0
         };
         
         this.adCooldown = 600000;
@@ -252,8 +255,6 @@ class TornadoApp {
             this.tgUser = this.tg.initDataUnsafe.user;
             
             this.showLoadingProgress(15);
-            
-
             
             this.telegramVerified = true;
             
@@ -674,7 +675,7 @@ class TornadoApp {
             username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
             telegramId: this.tgUser.id,
             firstName: this.getShortName(this.tgUser.first_name || 'User'),
-            photoUrl: this.tgUser.photo_url || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png',
+            photoUrl: this.tgUser.photo_url || this.appConfig.DEFAULT_USER_AVATAR,
             balance: 0,
             referrals: 0,
             referralCode: this.generateReferralCode(),
@@ -717,7 +718,7 @@ class TornadoApp {
                         userId: this.tgUser.id,
                         username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
                         firstName: this.getShortName(this.tgUser.first_name || ''),
-                        photoUrl: this.tgUser.photo_url || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png',
+                        photoUrl: this.tgUser.photo_url || this.appConfig.DEFAULT_USER_AVATAR,
                         joinedAt: this.getServerTime(),
                         state: 'pending',
                         bonusGiven: false,
@@ -738,7 +739,7 @@ class TornadoApp {
             username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
             telegramId: this.tgUser.id,
             firstName: this.getShortName(this.tgUser.first_name || ''),
-            photoUrl: this.tgUser.photo_url || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png',
+            photoUrl: this.tgUser.photo_url || this.appConfig.DEFAULT_USER_AVATAR,
             balance: 0,
             referrals: 0,
             referredBy: referralId,
@@ -1496,7 +1497,8 @@ class TornadoApp {
                 if (timersRef.exists()) {
                     const data = timersRef.val();
                     this.adTimers = {
-                        ad1: data.ad1 || 0
+                        ad1: data.ad1 || 0,
+                        ad2: data.ad2 || 0
                     };
                     return;
                 }
@@ -1508,7 +1510,8 @@ class TornadoApp {
             }
         } catch (error) {
             this.adTimers = {
-                ad1: 0
+                ad1: 0,
+                ad2: 0
             };
         }
     }
@@ -1519,6 +1522,7 @@ class TornadoApp {
             if (this.db) {
                 await this.db.ref(`userAdTimers/${this.tgUser.id}`).set({
                     ad1: this.adTimers.ad1,
+                    ad2: this.adTimers.ad2,
                     lastUpdated: currentTime
                 });
             }
@@ -1610,12 +1614,12 @@ class TornadoApp {
         const tonBalance = document.getElementById('header-ton-balance');
         
         if (userPhoto) {
-            userPhoto.src = this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png';
+            userPhoto.src = this.userState.photoUrl || this.appConfig.DEFAULT_USER_AVATAR;
             userPhoto.style.width = '60px';
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = '2px solid #1e3a8a';
+            userPhoto.style.border = '2px solid #3b82f6';
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1639,7 +1643,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = '#1e3a8a';
+            tonBalance.style.color = '#60a5fa';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -1647,8 +1651,8 @@ class TornadoApp {
         
         const bottomNavPhoto = document.getElementById('bottom-nav-user-photo');
         if (bottomNavPhoto && this.tgUser.photo_url) {
-    bottomNavPhoto.src = this.tgUser.photo_url;
-}
+            bottomNavPhoto.src = this.tgUser.photo_url;
+        }
     }
 
     renderUI() {
@@ -1721,50 +1725,81 @@ class TornadoApp {
         tasksPage.innerHTML = `
             <div id="tasks-content">
                 <div class="tasks-tabs">
-                    <button class="tab-btn active" data-tab="social-tab">
-                        <i class="fas fa-users"></i> Social
-                    </button>
-                    <button class="tab-btn" data-tab="partner-tab">
-                        <i class="fas fa-handshake"></i> Partner
+                    <button class="tab-btn active" data-tab="tasks-tab">
+                        <i class="fas fa-tasks"></i> Tasks
                     </button>
                     <button class="tab-btn" data-tab="more-tab">
                         <i class="fas fa-ellipsis-h"></i> More
                     </button>
                 </div>
                 
-                <div id="social-tab" class="tasks-tab-content active"></div>
-                <div id="partner-tab" class="tasks-tab-content"></div>
-                <div id="more-tab" class="tasks-tab-content">
-                    <div class="promo-card">
-                        <div class="promo-header">
-                            <div class="promo-icon">
-                                <i class="fas fa-gift"></i>
-                            </div>
-                            <h3>Promo Codes</h3>
-                            
-                        </div>
-                        <input type="text" id="promo-input" class="promo-input" 
-                               placeholder="Enter promo code" maxlength="20">
-                        <button id="promo-btn" class="promo-btn">
-                            <i class="fas fa-gift"></i> APPLY
-                        </button>
+                <div id="tasks-tab" class="tasks-tab-content active">
+                    <div class="task-category">
+                        <h3 class="task-category-title">
+                            <i class="fas fa-star"></i> Main Tasks
+                        </h3>
+                        <div id="main-tasks-list" class="referrals-list"></div>
                     </div>
-                    <div class="ad-card">
-                        <div class="ad-header">
-                            <div class="ad-icon">
-                                <i class="fas fa-ad"></i>
+                    
+                    <div class="task-category">
+                        <h3 class="task-category-title">
+                            <i class="fas fa-users"></i> Social Tasks
+                        </h3>
+                        <div id="social-tasks-list" class="referrals-list"></div>
+                    </div>
+                </div>
+                
+                <div id="more-tab" class="tasks-tab-content">
+                    <div class="more-grid">
+                        <div class="promo-card square-card">
+                            <div class="promo-header">
+                                <div class="promo-icon">
+                                    <i class="fas fa-gift"></i>
+                                </div>
+                                <h3>Promo Codes</h3>
                             </div>
-                            <div class="ad-title">Watch AD #1</div>
+                            <input type="text" id="promo-input" class="promo-input" 
+                                   placeholder="Enter promo code" maxlength="20">
+                            <button id="promo-btn" class="promo-btn">
+                                <i class="fas fa-gift"></i> APPLY
+                            </button>
                         </div>
-                        <div class="ad-reward">
-                            <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
-                            <span>Reward: 0.001 TON</span>
+                        
+                        <div class="ad-card square-card">
+                            <div class="ad-header">
+                                <div class="ad-icon">
+                                    <i class="fas fa-ad"></i>
+                                </div>
+                                <div class="ad-title">Watch AD #1</div>
+                            </div>
+                            <div class="ad-reward">
+                                <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
+                                <span>Reward: 0.001 TON</span>
+                            </div>
+                            <button class="ad-btn ${this.isAdAvailable(1) ? 'available' : 'cooldown'}" 
+                                    id="watch-ad-1-btn"
+                                    ${!this.isAdAvailable(1) ? 'disabled' : ''}>
+                                ${this.isAdAvailable(1) ? 'WATCH' : this.formatTime(this.getAdTimeLeft(1))}
+                            </button>
                         </div>
-                        <button class="ad-btn ${this.isAdAvailable(1) ? 'available' : 'cooldown'}" 
-                                id="watch-ad-1-btn"
-                                ${!this.isAdAvailable(1) ? 'disabled' : ''}>
-                            ${this.isAdAvailable(1) ? 'WATCH' : this.formatTime(this.getAdTimeLeft(1))}
-                        </button>
+                        
+                        <div class="ad-card square-card">
+                            <div class="ad-header">
+                                <div class="ad-icon">
+                                    <i class="fas fa-ad"></i>
+                                </div>
+                                <div class="ad-title">Watch AD #2</div>
+                            </div>
+                            <div class="ad-reward">
+                                <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
+                                <span>Reward: 0.001 TON</span>
+                            </div>
+                            <button class="ad-btn ${this.isAdAvailable(2) ? 'available' : 'cooldown'}" 
+                                    id="watch-ad-2-btn"
+                                    ${!this.isAdAvailable(2) ? 'disabled' : ''}>
+                                ${this.isAdAvailable(2) ? 'WATCH' : this.formatTime(this.getAdTimeLeft(2))}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1772,7 +1807,8 @@ class TornadoApp {
         
         setTimeout(() => {
             this.setupTasksTabs();
-            this.renderTasksTabContent();
+            this.loadMainTasks();
+            this.loadSocialTasks();
             this.setupPromoCodeEvents();
             this.setupAdWatchEvents();
             this.startAdTimers();
@@ -1794,25 +1830,46 @@ class TornadoApp {
                 const targetTab = document.getElementById(tabId);
                 if (targetTab) {
                     targetTab.classList.add('active');
-                    
-                    if (tabId === 'social-tab' && targetTab.innerHTML === '') {
-                        this.loadSocialTasks();
-                    } else if (tabId === 'partner-tab' && targetTab.innerHTML === '') {
-                        this.loadPartnerTasks();
-                    }
                 }
             });
         });
     }
 
-    async renderTasksTabContent() {
-        await this.loadSocialTasks();
-        await this.loadPartnerTasks();
+    async loadMainTasks() {
+        const mainTasksList = document.getElementById('main-tasks-list');
+        if (!mainTasksList) return;
+        
+        try {
+            let mainTasks = [];
+            if (this.taskManager) {
+                mainTasks = await this.taskManager.loadTasksFromDatabase('main');
+            }
+            
+            if (mainTasks.length > 0) {
+                const tasksHTML = mainTasks.map(task => this.renderTaskCard(task)).join('');
+                mainTasksList.innerHTML = tasksHTML;
+                this.setupTaskButtons();
+            } else {
+                mainTasksList.innerHTML = `
+                    <div class="no-tasks">
+                        <i class="fas fa-star"></i>
+                        <p>No main tasks available now</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            mainTasksList.innerHTML = `
+                <div class="no-tasks">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading main tasks</p>
+                </div>
+            `;
+        }
     }
 
     async loadSocialTasks() {
-        const socialTab = document.getElementById('social-tab');
-        if (!socialTab) return;
+        const socialTasksList = document.getElementById('social-tasks-list');
+        if (!socialTasksList) return;
         
         try {
             let socialTasks = [];
@@ -1822,14 +1879,10 @@ class TornadoApp {
             
             if (socialTasks.length > 0) {
                 const tasksHTML = socialTasks.map(task => this.renderTaskCard(task)).join('');
-                socialTab.innerHTML = `
-                    <div class="referrals-list">
-                        ${tasksHTML}
-                    </div>
-                `;
+                socialTasksList.innerHTML = tasksHTML;
                 this.setupTaskButtons();
             } else {
-                socialTab.innerHTML = `
+                socialTasksList.innerHTML = `
                     <div class="no-tasks">
                         <i class="fas fa-users"></i>
                         <p>No social tasks available now</p>
@@ -1837,7 +1890,7 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
-            socialTab.innerHTML = `
+            socialTasksList.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>Error loading social tasks</p>
@@ -1846,45 +1899,9 @@ class TornadoApp {
         }
     }
 
-    async loadPartnerTasks() {
-        const partnerTab = document.getElementById('partner-tab');
-        if (!partnerTab) return;
-        
-        try {
-            let partnerTasks = [];
-            if (this.taskManager) {
-                partnerTasks = await this.taskManager.loadTasksFromDatabase('partner');
-            }
-            
-            if (partnerTasks.length > 0) {
-                const tasksHTML = partnerTasks.map(task => this.renderTaskCard(task)).join('');
-                partnerTab.innerHTML = `
-                    <div class="referrals-list">
-                        ${tasksHTML}
-                    </div>
-                `;
-                this.setupTaskButtons();
-            } else {
-                partnerTab.innerHTML = `
-                    <div class="no-tasks">
-                        <i class="fas fa-handshake"></i>
-                        <p>No partner tasks available now</p>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            partnerTab.innerHTML = `
-                <div class="no-tasks">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading partner tasks</p>
-                </div>
-            `;
-        }
-    }
-
     renderTaskCard(task) {
         const isCompleted = this.userCompletedTasks.has(task.id);
-        const defaultIcon = 'https://i.ibb.co/GvWFRrnp/ninja.png';
+        const defaultIcon = this.appConfig.BOT_AVATAR;
         
         let buttonText = 'Start';
         let buttonClass = 'start';
@@ -2094,6 +2111,9 @@ class TornadoApp {
         if (adNumber === 1) {
             const currentTime = this.getServerTime();
             return this.adTimers.ad1 + this.adCooldown <= currentTime;
+        } else if (adNumber === 2) {
+            const currentTime = this.getServerTime();
+            return this.adTimers.ad2 + this.adCooldown <= currentTime;
         }
         return false;
     }
@@ -2102,25 +2122,35 @@ class TornadoApp {
         if (adNumber === 1) {
             const currentTime = this.getServerTime();
             return Math.max(0, this.adTimers.ad1 + this.adCooldown - currentTime);
+        } else if (adNumber === 2) {
+            const currentTime = this.getServerTime();
+            return Math.max(0, this.adTimers.ad2 + this.adCooldown - currentTime);
         }
         return 0;
     }
 
     setupAdWatchEvents() {
         const watchAd1Btn = document.getElementById('watch-ad-1-btn');
+        const watchAd2Btn = document.getElementById('watch-ad-2-btn');
         
         if (watchAd1Btn) {
             watchAd1Btn.addEventListener('click', async () => {
                 await this.watchAd(1);
             });
         }
+        
+        if (watchAd2Btn) {
+            watchAd2Btn.addEventListener('click', async () => {
+                await this.watchAd(2);
+            });
+        }
     }
 
     async watchAd(adNumber) {
         const currentTime = this.getServerTime();
-        const adTimerKey = 'ad1';
+        const adTimerKey = adNumber === 1 ? 'ad1' : 'ad2';
         
-        if (adNumber !== 1) {
+        if (adNumber !== 1 && adNumber !== 2) {
             this.notificationManager.showNotification("Error", "Invalid ad", "error");
             return;
         }
@@ -2140,8 +2170,14 @@ class TornadoApp {
         try {
             let adShown = false;
             
-            if (this.adManager) {
-                adShown = await this.adManager.showWatchAd1();
+            if (adNumber === 1) {
+                if (this.adManager) {
+                    adShown = await this.adManager.showWatchAd1();
+                }
+            } else if (adNumber === 2) {
+                if (typeof show_10558486 !== 'undefined') {
+                    adShown = await show_10558486();
+                }
             }
             
             if (adShown) {
@@ -2196,22 +2232,25 @@ class TornadoApp {
     updateAdButtons() {
         const currentTime = this.getServerTime();
         
-        const adBtn = document.getElementById(`watch-ad-1-btn`);
-        if (!adBtn) return;
-        
-        const timeLeft = Math.max(0, this.adTimers.ad1 + this.adCooldown - currentTime);
-        
-        if (timeLeft > 0) {
-            adBtn.disabled = true;
-            adBtn.innerHTML = this.formatTime(timeLeft);
-            adBtn.classList.remove('available');
-            adBtn.classList.add('cooldown');
-        } else {
-            adBtn.disabled = false;
-            adBtn.innerHTML = 'WATCH';
-            adBtn.classList.add('available');
-            adBtn.classList.remove('cooldown');
-        }
+        [1, 2].forEach(adNumber => {
+            const adBtn = document.getElementById(`watch-ad-${adNumber}-btn`);
+            if (!adBtn) return;
+            
+            const timerKey = adNumber === 1 ? 'ad1' : 'ad2';
+            const timeLeft = Math.max(0, this.adTimers[timerKey] + this.adCooldown - currentTime);
+            
+            if (timeLeft > 0) {
+                adBtn.disabled = true;
+                adBtn.innerHTML = this.formatTime(timeLeft);
+                adBtn.classList.remove('available');
+                adBtn.classList.add('cooldown');
+            } else {
+                adBtn.disabled = false;
+                adBtn.innerHTML = 'WATCH';
+                adBtn.classList.add('available');
+                adBtn.classList.remove('cooldown');
+            }
+        });
     }
 
     startAdTimers() {
@@ -2403,43 +2442,9 @@ class TornadoApp {
         
         profilePage.innerHTML = `
             <div class="profile-container">
-                <div class="profile-header-section">
-                    <div class="profile-avatar-large">
-                        <img src="${this.userState.photoUrl || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png'}" 
-                             alt="${this.userState.firstName}"
-                             oncontextmenu="return false;"
-                             ondragstart="return false;">
-                    </div>
-                    <div class="profile-username">${this.userState.username}</div>
-                    <div class="profile-balance-display">
-                        <i class="fas fa-gem"></i>
-                        <span class="balance-amount-large">${this.safeNumber(this.userState.balance).toFixed(5)} TON</span>
-                    </div>
-                </div>
-                
                 <div class="profile-stats-section">
                     <h3><i class="fas fa-chart-line"></i> Statistics</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-calendar-day"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h4>Joined at</h4>
-                                <p class="stat-value">${formattedDate} ${formattedTime}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-ad"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h4>Watched Ads</h4>
-                                <p class="stat-value">${this.userState.totalAds || 0}</p>
-                            </div>
-                        </div>
-                        
+                    <div class="profile-stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-users"></i>
@@ -2447,16 +2452,6 @@ class TornadoApp {
                             <div class="stat-info">
                                 <h4>Total Referrals</h4>
                                 <p class="stat-value">${this.userState.referrals || 0}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-wallet"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h4>Total Withdrawals</h4>
-                                <p class="stat-value">${this.safeNumber(this.userState.totalWithdrawnAmount).toFixed(5)} TON</p>
                             </div>
                         </div>
                         
@@ -2475,16 +2470,57 @@ class TornadoApp {
                                 <i class="fas fa-tasks"></i>
                             </div>
                             <div class="stat-info">
-                                <h4>Tasks Completed</h4>
+                                <h4>Total Tasks</h4>
                                 <p class="stat-value">${this.userState.totalTasksCompleted || 0}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-ad"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Ads</h4>
+                                <p class="stat-value">${this.userState.totalAds || 0}</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="profile-actions-section">
-                    <button id="withdraw-btn" class="withdraw-btn">
-                        <i class="fas fa-paper-plane"></i> WITHDRAW
+                <div class="withdraw-card">
+                    <div class="withdraw-info">
+                        <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
+                        <p class="current-balance">Available: ${this.safeNumber(this.userState.balance).toFixed(5)} TON</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="profile-wallet-input">
+                            <i class="fas fa-wallet"></i> TON Wallet Address
+                        </label>
+                        <input type="text" id="profile-wallet-input" class="form-input" 
+                               placeholder="Enter your TON wallet address (UQ...)"
+                               required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="profile-amount-input">
+                            <i class="fas fa-gem"></i> Withdrawal Amount
+                        </label>
+                        <input type="number" id="profile-amount-input" class="form-input" 
+                               step="0.00001" min="${this.appConfig.MINIMUM_WITHDRAW}" 
+                               max="${this.safeNumber(this.userState.balance)}"
+                               placeholder="Minimum: ${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON"
+                               required>
+                    </div>
+                    
+                    <div class="withdraw-minimum-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Minimum Withdrawal: <strong>${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON</strong></span>
+                    </div>
+                    
+                    <button id="profile-withdraw-btn" class="withdraw-btn" 
+                            ${this.safeNumber(this.userState.balance) < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
+                        <i class="fas fa-paper-plane"></i> WITHDRAW NOW
                     </button>
                 </div>
             </div>
@@ -2494,83 +2530,15 @@ class TornadoApp {
     }
 
     setupProfilePageEvents() {
-        const withdrawBtn = document.getElementById('withdraw-btn');
+        const withdrawBtn = document.getElementById('profile-withdraw-btn');
+        const walletInput = document.getElementById('profile-wallet-input');
+        const amountInput = document.getElementById('profile-amount-input');
         
         if (withdrawBtn) {
             withdrawBtn.addEventListener('click', async () => {
-                await this.showWithdrawModal();
+                await this.handleProfileWithdrawal(walletInput, amountInput, withdrawBtn);
             });
         }
-    }
-    
-    async showWithdrawModal() {
-        const modal = document.createElement('div');
-        modal.className = 'withdraw-modal';
-        
-        const userBalance = this.safeNumber(this.userState.balance);
-        const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
-        
-        modal.innerHTML = `
-            <div class="withdraw-modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label" for="modal-wallet-input">
-                            <i class="fas fa-wallet"></i> TON Wallet Address
-                        </label>
-                        <input type="text" id="modal-wallet-input" class="form-input" 
-                               placeholder="Enter your TON wallet address (UQ...)"
-                               required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="modal-amount-input">
-                            <i class="fas fa-gem"></i> Withdrawal Amount
-                        </label>
-                        <input type="number" id="modal-amount-input" class="form-input" 
-                               step="0.00001" min="${minimumWithdraw}" max="${userBalance}"
-                               placeholder="Minimum: ${minimumWithdraw} TON"
-                               required>
-                    </div>
-                    
-                    <div class="withdraw-minimum-info">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Minimum Withdrawal: <strong>${minimumWithdraw.toFixed(3)} TON</strong></span>
-                    </div>
-                    
-                    <div class="current-balance-info">
-                        <i class="fas fa-coins"></i>
-                        <span>Your Balance: <strong>${userBalance.toFixed(5)} TON</strong></span>
-                    </div>
-                    
-                    <button id="modal-withdraw-btn" class="modal-withdraw-btn" 
-                            ${userBalance < minimumWithdraw ? 'disabled' : ''}>
-                        <i class="fas fa-paper-plane"></i> WITHDRAW NOW
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        const closeBtn = modal.querySelector('.close-modal');
-        const withdrawBtn = modal.querySelector('#modal-withdraw-btn');
-        const walletInput = modal.querySelector('#modal-wallet-input');
-        const amountInput = modal.querySelector('#modal-amount-input');
-        
-        closeBtn.addEventListener('click', () => {
-            modal.remove();
-        });
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
         
         if (amountInput) {
             amountInput.addEventListener('input', () => {
@@ -2582,15 +2550,9 @@ class TornadoApp {
                 }
             });
         }
-        
-        if (withdrawBtn) {
-            withdrawBtn.addEventListener('click', async () => {
-                await this.handleWithdrawal(walletInput, amountInput, withdrawBtn, modal);
-            });
-        }
     }
     
-    async handleWithdrawal(walletInput, amountInput, withdrawBtn, modal) {
+    async handleProfileWithdrawal(walletInput, amountInput, withdrawBtn) {
         if (!walletInput || !amountInput || !withdrawBtn) return;
         
         const walletAddress = walletInput.value.trim();
@@ -2713,10 +2675,6 @@ class TornadoApp {
             this.renderProfilePage();
             
             this.notificationManager.showNotification("Success", "Withdrawal request submitted!", "success");
-            
-            if (modal) {
-                modal.remove();
-            }
             
         } catch (error) {
             this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
