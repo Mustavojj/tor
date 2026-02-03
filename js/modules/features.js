@@ -24,23 +24,23 @@ class TaskManager {
         if (!forceRefresh) {
             const cached = this.app.cache.get(cacheKey);
             if (cached) {
-                this.partnerTasks = cached.partnerTasks || [];
+                this.mainTasks = cached.mainTasks || [];
                 this.socialTasks = cached.socialTasks || [];
                 return;
             }
         }
         
         try {
-            this.partnerTasks = await this.loadTasksFromDatabase('partner');
+            this.mainTasks = await this.loadTasksFromDatabase('main');
             this.socialTasks = await this.loadTasksFromDatabase('social');
             
             this.app.cache.set(cacheKey, {
-                partnerTasks: this.partnerTasks,
+                mainTasks: this.mainTasks,
                 socialTasks: this.socialTasks
             }, 30000);
             
         } catch (error) {
-            this.partnerTasks = [];
+            this.mainTasks = [];
             this.socialTasks = [];
         }
     }
@@ -80,7 +80,7 @@ class TaskManager {
                             id: child.key, 
                             name: taskData.name || 'Unknown Task',
                             description: taskData.description || 'Join & Get Reward',
-                            picture: taskData.picture || 'https://cdn-icons-png.flaticon.com/512/9195/9195920.png',
+                            picture: taskData.picture || this.app.appConfig.BOT_AVATAR,
                             url: taskData.url || '',
                             type: taskData.type || 'channel',
                             category: category,
@@ -106,8 +106,8 @@ class TaskManager {
         }
     }
 
-    getPartnerTasks() {
-        return this.partnerTasks;
+    getMainTasks() {
+        return this.mainTasks;
     }
 
     getSocialTasks() {
@@ -277,7 +277,7 @@ class TaskManager {
         
         try {
             let task = null;
-            for (const t of [...this.partnerTasks, ...this.socialTasks]) {
+            for (const t of [...this.mainTasks, ...this.socialTasks]) {
                 if (t.id === taskId) {
                     task = t;
                     break;
@@ -383,7 +383,7 @@ class TaskManager {
             if (!this.app.db) return false;
             
             let task = null;
-            for (const t of [...this.partnerTasks, ...this.socialTasks]) {
+            for (const t of [...this.mainTasks, ...this.socialTasks]) {
                 if (t.id === taskId) {
                     task = t;
                     break;
@@ -521,7 +521,7 @@ class TaskManager {
                     name: name,
                     url: url,
                     type: 'channel',
-                    category: 'social',
+                    category: 'main',
                     reward: 0.001,
                     currentCompletions: 0,
                     maxCompletions: target,
