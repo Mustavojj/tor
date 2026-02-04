@@ -25,9 +25,9 @@
 }
 
 body.light-mode {
-    --background-color: #f8fafc;
-    --card-bg: #ffffff;
-    --card-bg-solid: #ffffff;
+    --background-color: #ffffff;
+    --card-bg: #f8fafc;
+    --card-bg-solid: #f1f5f9;
     --card-border: rgba(59, 130, 246, 0.2);
     --text-primary: #1e293b;
     --text-secondary: #475569;
@@ -42,6 +42,8 @@ body.light-mode {
     -ms-user-select: none;
     user-select: none;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
 }
 
 body {
@@ -217,6 +219,10 @@ body {
     text-overflow: ellipsis;
 }
 
+body.light-mode .user-name {
+    color: #1e40af;
+}
+
 .balance-amount {
     font-size: 1.1rem;
     font-weight: 700;
@@ -277,7 +283,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .nav-btn i {
@@ -304,6 +310,10 @@ body {
     border-color: var(--accent-color);
 }
 
+.nav-btn:active {
+    transform: scale(0.98);
+}
+
 .tasks-tabs {
     display: flex;
     background: var(--card-bg);
@@ -328,13 +338,17 @@ body {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .tab-btn.active {
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
     color: white;
     box-shadow: var(--shadow-light);
+}
+
+.tab-btn:active {
+    transform: scale(0.98);
 }
 
 .tasks-tab-content {
@@ -357,6 +371,10 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+body.light-mode .task-category-title {
+    color: #1e40af;
 }
 
 .task-category-title i {
@@ -442,7 +460,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     margin-top: auto;
 }
 
@@ -454,6 +472,10 @@ body {
 .promo-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.promo-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .ad-card {
@@ -521,7 +543,7 @@ body {
     font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     margin-top: auto;
 }
 
@@ -541,6 +563,10 @@ body {
 .ad-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.ad-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .referrals-list {
@@ -607,7 +633,7 @@ body {
     cursor: pointer;
     white-space: nowrap;
     min-width: 85px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .task-btn.start {
@@ -639,6 +665,10 @@ body {
 .task-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: var(--shadow-light);
+}
+
+.task-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .no-tasks {
@@ -719,12 +749,16 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .copy-btn:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.copy-btn:active {
+    transform: scale(0.98);
 }
 
 .referral-info {
@@ -792,6 +826,10 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+body.light-mode .referral-stats-section h3 {
+    color: #1e40af;
 }
 
 .stats-grid-two {
@@ -906,6 +944,10 @@ body {
     gap: 10px;
 }
 
+body.light-mode .profile-stats-section h3 {
+    color: #1e40af;
+}
+
 .profile-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -937,6 +979,10 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+body.light-mode .withdraw-info h3 {
+    color: #1e40af;
 }
 
 .current-balance {
@@ -1059,7 +1105,7 @@ body {
     justify-content: center;
     gap: 10px;
     margin-top: 10px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .withdraw-btn:disabled {
@@ -1072,6 +1118,10 @@ body {
 .withdraw-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.withdraw-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .welcome-tasks-modal {
@@ -1176,7 +1226,7 @@ body.light-mode .welcome-tasks-modal {
     gap: 6px;
     white-space: nowrap;
     min-width: 85px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .welcome-task-btn.completed {
@@ -1187,6 +1237,10 @@ body.light-mode .welcome-tasks-modal {
 .welcome-task-btn:hover:not(.completed) {
     transform: translateY(-1px);
     box-shadow: var(--shadow-light);
+}
+
+.welcome-task-btn:active:not(.completed) {
+    transform: scale(0.98);
 }
 
 .check-welcome-btn {
@@ -1220,6 +1274,10 @@ body.light-mode .welcome-tasks-modal {
 .check-welcome-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.check-welcome-btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .error-container {
@@ -1320,12 +1378,16 @@ body.light-mode .welcome-tasks-modal {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .reload-btn:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.reload-btn:active {
+    transform: scale(0.98);
 }
 
 .banned-container {
@@ -1588,12 +1650,16 @@ body.light-mode .welcome-tasks-modal {
     justify-content: center;
     gap: 8px;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .telegram-btn:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
+}
+
+.telegram-btn:active {
+    transform: scale(0.98);
 }
 
 @media (max-width: 480px) {
