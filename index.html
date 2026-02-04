@@ -27,7 +27,6 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // تهيئة إعلانات المهام
             if (typeof Adsgram !== 'undefined') {
                 window.AdBlock19345 = Adsgram.init({ blockId: "22317" });
                 window.AdBlock2 = Adsgram.init({ blockId: "int-22318" });
@@ -39,27 +38,74 @@
     
     <div class="app-background"></div>
     
-    <div id="app-loader" style="background: #000000;">
-        <div class="loading-card">
-            <div class="loading-card-header">
-                <div class="loading-card-logo-container">
-                    <img src="https://i.ibb.co/GvWFRrnp/ninja.png" 
-                         alt="Tornado" 
-                         class="loading-card-logo"
-                         oncontextmenu="return false;" 
-                         ondragstart="return false;">
-                </div>
-                <h1 class="loading-card-title">TORNADO</h1>
+    <div id="app-loader" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    ">
+        <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        ">
+            <div style="
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                overflow: hidden;
+                margin-bottom: 20px;
+                position: relative;
+            ">
+                <img src="https://i.ibb.co/GvWFRrnp/ninja.png" 
+                     alt="Tornado" 
+                     style="
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        border-radius: 50%;
+                     "
+                     oncontextmenu="return false;" 
+                     ondragstart="return false;">
+                
+                <div style="
+                    position: absolute;
+                    top: -5px;
+                    left: -5px;
+                    right: -5px;
+                    bottom: -5px;
+                    border: 3px solid transparent;
+                    border-top-color: #3b82f6;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                "></div>
             </div>
             
-            <div class="loading-card-body">
-                <div class="loading-progress-container">
-                    <div class="loading-progress-bar" id="loading-progress-bar"></div>
-                </div>
-                <p class="loading-percentage" id="loading-percentage">Loading...</p>
-            </div>
+            <div style="
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: #3b82f6;
+                font-family: monospace;
+                margin-top: 10px;
+            " id="loading-percentage">0%</div>
         </div>
     </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 
     <div id="app" style="display: none;">
         <header class="app-header">
@@ -74,9 +120,10 @@
                                  ondragstart="return false;">
                         </div>
                          <div class="user-info-left">
-    <h2 id="user-name" class="user-name">User</h2>
-    <div id="header-ton-balance" class="balance-amount">0.00000 TON</div>
+                            <h2 id="user-name" class="user-name">User</h2>
+                            <div id="header-ton-balance" class="balance-amount">0.00000 TON</div>
                          </div>
+                    </div>
                 </div>
             </div>
         </header>
