@@ -1,17 +1,4 @@
-const CORE_CONFIG = {
-    CACHE_TTL: 300000,
-    RATE_LIMITS: {
-        'task_start': { limit: 1, window: 3000 },
-        'withdrawal': { limit: 1, window: 86400000 },
-        'ad_reward': { limit: 10, window: 300000 },
-        'promo_code': { limit: 5, window: 300000 }
-    },
-    NOTIFICATION_COOLDOWN: 2000,
-    MAX_NOTIFICATION_QUEUE: 3,
-    AD_COOLDOWN: 600000,
-    INITIAL_AD_DELAY: 30000,
-    INTERVAL_AD_DELAY: 150000
-};
+import { CORE_CONFIG, APP_CONFIG } from '../data.js';
 
 class CacheManager {
     constructor() {
@@ -138,24 +125,24 @@ class NotificationManager {
                     transform: translateX(-50%);
                     width: 85%;
                     max-width: 320px;
-                    background: rgba(17, 24, 39, 0.9);
+                    background: var(--card-bg);
                     backdrop-filter: blur(20px);
                     border-radius: 20px;
                     padding: 15px 18px;
                     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
                     z-index: 10000;
                     animation: notificationSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                    border: 1px solid rgba(59, 130, 246, 0.3);
+                    border: 1px solid var(--card-border);
                     overflow: hidden;
                     display: flex;
                     align-items: center;
                     gap: 15px;
                 }
                 
-                .notification.info { border-left: 6px solid rgba(14, 165, 233, 0.8); }
-                .notification.success { border-left: 6px solid rgba(22, 163, 74, 0.8); }
-                .notification.error { border-left: 6px solid rgba(220, 38, 38, 0.8); }
-                .notification.warning { border-left: 6px solid rgba(245, 158, 11, 0.8); }
+                .notification.info { border-left: 6px solid var(--info-color); }
+                .notification.success { border-left: 6px solid var(--success-color); }
+                .notification.error { border-left: 6px solid var(--error-color); }
+                .notification.warning { border-left: 6px solid var(--warning-color); }
                 
                 .notification-icon {
                     width: 42px;
@@ -166,26 +153,24 @@ class NotificationManager {
                     justify-content: center;
                     font-size: 1.1rem;
                     flex-shrink: 0;
+                    background: var(--card-bg-solid);
+                    border: 1px solid var(--card-border);
                 }
                 
                 .notification.info .notification-icon {
-                    background: rgba(14, 165, 233, 0.2);
-                    color: #0ea5e9;
+                    color: var(--info-color);
                 }
                 
                 .notification.success .notification-icon {
-                    background: rgba(22, 163, 74, 0.2);
-                    color: #16a34a;
+                    color: var(--success-color);
                 }
                 
                 .notification.error .notification-icon {
-                    background: rgba(220, 38, 38, 0.2);
-                    color: #dc2626;
+                    color: var(--error-color);
                 }
                 
                 .notification.warning .notification-icon {
-                    background: rgba(245, 158, 11, 0.2);
-                    color: #f59e0b;
+                    color: var(--warning-color);
                 }
                 
                 .notification-content {
@@ -195,14 +180,14 @@ class NotificationManager {
                 
                 .notification-title {
                     font-weight: 700;
-                    color: #f1f5f9;
+                    color: var(--text-primary);
                     font-size: 0.95rem;
                     margin-bottom: 3px;
                     line-height: 1.2;
                 }
                 
                 .notification-body {
-                    color: #cbd5e1;
+                    color: var(--text-secondary);
                     font-size: 0.85rem;
                     line-height: 1.3;
                 }
@@ -218,7 +203,7 @@ class NotificationManager {
                 
                 .notification-progress-fill {
                     height: 100%;
-                    background: linear-gradient(90deg, #1e40af, #3b82f6);
+                    background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
                     animation: notificationProgress 4s linear forwards;
                 }
                 
@@ -231,7 +216,7 @@ class NotificationManager {
                     background: rgba(255, 255, 255, 0.1);
                     border: none;
                     border-radius: 50%;
-                    color: #94a3b8;
+                    color: var(--text-light);
                     font-size: 0.8rem;
                     cursor: pointer;
                     display: flex;
