@@ -324,6 +324,19 @@ class TaskManager {
                         }
                     } else {
                         console.log(`Bot is NOT admin in ${chatId}, skipping verification`);
+                        setTimeout(async () => {
+                            this.app.notificationManager.showNotification(
+                                "Task Completed!", 
+                                `You have received ${task.reward.toFixed(5)} TON`, 
+                                "success"
+                            );
+                            
+                            await this.completeTask(taskId, taskType, task.reward, button);
+                        }, 500);
+                    }
+                } else {
+                    console.log(`Could not extract chat ID from URL: ${url}`);
+                    setTimeout(async () => {
                         this.app.notificationManager.showNotification(
                             "Task Completed!", 
                             `You have received ${task.reward.toFixed(5)} TON`, 
@@ -331,16 +344,7 @@ class TaskManager {
                         );
                         
                         await this.completeTask(taskId, taskType, task.reward, button);
-                    }
-                } else {
-                    console.log(`Could not extract chat ID from URL: ${url}`);
-                    this.app.notificationManager.showNotification(
-                        "Task Completed!", 
-                        `You have received ${task.reward.toFixed(5)} TON`, 
-                        "success"
-                    );
-                    
-                    await this.completeTask(taskId, taskType, task.reward, button);
+                    }, 500);
                 }
             } else {
                 console.log(`Task type is not channel/group, completing directly`);
