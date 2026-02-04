@@ -1605,3 +1605,72 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
 }
+
+/* ... الكود السابق يبقى كما هو ... */
+
+.promo-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 10px; /* تقليل padding */
+    border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
+    min-height: auto; /* إزالة min-height */
+}
+
+.promo-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px; /* تقليل margin */
+}
+
+.promo-icon {
+    width: 32px; /* تصغير أكثر */
+    height: 32px;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.promo-header h3 {
+    font-size: 0.9rem; /* تصغير أكثر */
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.promo-input {
+    width: 100%;
+    padding: 8px 10px; /* تقليل أكثر */
+    background: var(--background-color);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    outline: none;
+    margin-bottom: 8px; /* تقليل المسافة */
+    box-sizing: border-box;
+}
+
+.promo-btn {
+    width: 100%;
+    padding: 8px; /* تقليل أكثر */
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 0; /* إزالة margin إضافي */
+}
+
+/* ... الكود اللاحق يبقى كما هو ... */
