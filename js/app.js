@@ -1,47 +1,4 @@
-const APP_CONFIG = {
-    APP_NAME: "Tornado",
-    BOT_USERNAME: "Tornado_Rbot",
-    MINIMUM_WITHDRAW: 0.10,
-    REFERRAL_BONUS_TON: 0.01,
-    REFERRAL_PERCENTAGE: 10,
-    REFERRAL_BONUS_TASKS: 0,
-    TASK_REWARD_BONUS: 0,
-    MAX_DAILY_ADS: 999999,
-    AD_COOLDOWN: 600000,
-    DEFAULT_USER_AVATAR: "https://cdn-icons-png.flaticon.com/512/9195/9195920.png",
-    BOT_AVATAR: "https://i.ibb.co/GvWFRrnp/ninja.png",
-    WELCOME_TASKS: [
-        {
-            name: "Join Tornado Channel",
-            url: "https://t.me/TORNADO_CHNL",
-            channel: "@TORNADO_CHNL"
-        },
-        {
-            name: "Join Tornado Group",
-            url: "https://t.me/NEJARS",
-            channel: "@NEJARS"
-        },
-        {
-            name: "Join Money Hub",
-            url: "https://t.me/MONEYHUB9_69",
-            channel: "@MONEYHUB9_69"
-        },
-        {
-            name: "Join Crypto AL",
-            url: "https://t.me/Crypto_al2",
-            channel: "@Crypto_al2"
-        }
-    ],
-    
-    WELCOME_MESSAGE: {
-        text: "⚡ Welcome to Tornado!",
-        buttons: [
-            {text: "Start App 💎", url: "https://t.me/Tornado_Rbot/start"},
-            {text: "Get News 📰", url: "https://t.me/Tornado_Channel"}
-        ]
-    }
-};
-
+import { APP_CONFIG, THEME_CONFIG } from './data.js';
 import { CacheManager, NotificationManager, SecurityManager, AdManager } from './modules/core.js';
 import { TaskManager, QuestManager, ReferralManager } from './modules/features.js';
 
@@ -57,6 +14,7 @@ class TornadoApp {
         this.currentUser = null;
         this.userState = {};
         this.appConfig = APP_CONFIG;
+        this.themeConfig = THEME_CONFIG;
         
         this.userCompletedTasks = new Set();
         this.partnerTasks = [];
@@ -71,9 +29,9 @@ class TornadoApp {
         };
         
         this.pages = [
-            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#1e3a8a' },
-            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#1e3a8a' },
-            { id: 'profile-page', name: 'Profile', icon: 'user-photo', color: '#1e3a8a' }
+            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#3b82f6' },
+            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#3b82f6' },
+            { id: 'profile-page', name: 'Profile', icon: 'user-photo', color: '#3b82f6' }
         ];
         
         this.cache = new CacheManager();
@@ -100,16 +58,12 @@ class TornadoApp {
             ad2: 0
         };
         
-        this.adCooldown = 600000;
+        this.adCooldown = APP_CONFIG.AD_COOLDOWN;
         
         this.referralMonitorInterval = null;
         
         this.welcomeTasksShown = false;
         this.welcomeTasksCompleted = false;
-        this.welcomeTasksVerified = {
-            newsChannel: false,
-            group: false
-        };
         
         this.remoteConfig = null;
         this.configCache = null;
@@ -125,6 +79,7 @@ class TornadoApp {
         this.timeSyncInterval = null;
         
         this.telegramVerified = false;
+        this.themeToggleBtn = null;
     }
 
     getRateLimiterClass() {
@@ -262,7 +217,12 @@ class TornadoApp {
             
             this.showLoadingProgress(15);
             
-            this.telegramVerified = true;
+            this.telegramVerified = await this.verifyTelegramUser();
+            
+            if (!this.telegramVerified) {
+                this.showError("Telegram verification failed");
+                return;
+            }
             
             this.showLoadingProgress(25);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
@@ -319,6 +279,7 @@ class TornadoApp {
             try {
                 await this.loadTasksData();
             } catch (taskError) {
+                console.warn('Tasks loading error:', taskError);
             }
             
             this.showLoadingProgress(75);
@@ -326,6 +287,7 @@ class TornadoApp {
             try {
                 await this.loadHistoryData();
             } catch (historyError) {
+                console.warn('History loading error:', historyError);
             }
             
             this.showLoadingProgress(80);
@@ -333,6 +295,7 @@ class TornadoApp {
             try {
                 await this.loadAppStats();
             } catch (statsError) {
+                console.warn('Stats loading error:', statsError);
             }
             
             this.showLoadingProgress(85);
@@ -340,14 +303,16 @@ class TornadoApp {
             try {
                 await this.loadAdTimers();
             } catch (adError) {
+                console.warn('Ad timers loading error:', adError);
             }
             
             this.showLoadingProgress(90);
             
             this.renderUI();
             
+            // تعيين الوضع الداكن افتراضيًا
             this.darkMode = true;
-            document.body.classList.add('dark-mode');
+            this.applyTheme();
             
             this.isInitialized = true;
             this.isInitializing = false;
@@ -390,6 +355,8 @@ class TornadoApp {
             }, 500);
             
         } catch (error) {
+            console.error('Initialization error:', error);
+            
             if (this.notificationManager) {
                 this.notificationManager.showNotification(
                     "Initialization Error",
@@ -459,6 +426,7 @@ class TornadoApp {
                 }, 30000);
             }
         } catch (error) {
+            console.warn('In-app ads initialization error:', error);
         }
     }
     
@@ -491,6 +459,7 @@ class TornadoApp {
                     throw new Error('Failed to load Firebase config from API');
                 }
             } catch (apiError) {
+                console.warn('Using fallback Firebase config:', apiError);
                 firebaseConfig = {
                     apiKey: "fallback-key-123",
                     authDomain: "fallback.firebaseapp.com",
@@ -547,6 +516,8 @@ class TornadoApp {
             return true;
             
         } catch (error) {
+            console.error('Firebase initialization error:', error);
+            
             this.notificationManager?.showNotification(
                 "Authentication Error",
                 "Failed to connect to database. Some features may not work.",
@@ -572,6 +543,7 @@ class TornadoApp {
                 try {
                     await this.auth.signInAnonymously();
                 } catch (error) {
+                    console.warn('Anonymous auth error:', error);
                 }
             }
         });
@@ -608,6 +580,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.warn('Sync user with Firebase error:', error);
         }
     }
 
@@ -664,6 +637,7 @@ class TornadoApp {
             this.updateHeader();
             
         } catch (error) {
+            console.error('Load user data error:', error);
             this.userState = this.getDefaultUserState();
             this.updateHeader();
             
@@ -698,7 +672,8 @@ class TornadoApp {
             firebaseUid: this.auth?.currentUser?.uid || null,
             welcomeTasksCompleted: false,
             isNewUser: false,
-            totalWithdrawnAmount: 0
+            totalWithdrawnAmount: 0,
+            totalWatchAds: 0 // إضافة متغير جديد لمشاهدات الإعلانات
         };
     }
 
@@ -768,14 +743,17 @@ class TornadoApp {
             welcomeTasksCompleted: false,
             welcomeTasksCompletedAt: null,
             isNewUser: true,
-            totalWithdrawnAmount: 0
+            totalWithdrawnAmount: 0,
+            totalWatchAds: 0 // إضافة متغير جديد
         };
         
         await userRef.set(userData);
         
         try {
             await this.updateAppStats('totalUsers', 1);
-        } catch (statsError) {}
+        } catch (statsError) {
+            console.warn('Update app stats error:', statsError);
+        }
         
         return userData;
     }
@@ -800,7 +778,9 @@ class TornadoApp {
                             bannedAt: this.getServerTime()
                         });
                     }
-                } catch (error) {}
+                } catch (error) {
+                    console.warn('Ban user error:', error);
+                }
                 
                 return false;
             }
@@ -812,6 +792,7 @@ class TornadoApp {
             
             return true;
         } catch (error) {
+            console.warn('Check multi-account error:', error);
             return true;
         }
     }
@@ -919,7 +900,8 @@ class TornadoApp {
             welcomeTasksCompleted: userData.welcomeTasksCompleted || false,
             welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null,
             isNewUser: userData.isNewUser || false,
-            totalWithdrawnAmount: userData.totalWithdrawnAmount || 0
+            totalWithdrawnAmount: userData.totalWithdrawnAmount || 0,
+            totalWatchAds: userData.totalWatchAds || 0 // إضافة متغير جديد
         };
         
         const updates = {};
@@ -1008,6 +990,7 @@ class TornadoApp {
             await this.refreshReferralsList();
             
         } catch (error) {
+            console.warn('Process referral bonus error:', error);
         }
     }
 
@@ -1057,6 +1040,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.warn('Process referral task bonus error:', error);
         }
     }
 
@@ -1067,6 +1051,7 @@ class TornadoApp {
             }
             return [];
         } catch (error) {
+            console.warn('Load tasks data error:', error);
             return [];
         }
     }
@@ -1095,6 +1080,7 @@ class TornadoApp {
             this.userWithdrawals.sort((a, b) => (b.createdAt || b.timestamp) - (a.createdAt || a.timestamp));
             
         } catch (error) {
+            console.warn('Load history data error:', error);
             this.userWithdrawals = [];
         }
     }
@@ -1136,6 +1122,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.warn('Load app stats error:', error);
             this.appStats = {
                 totalUsers: 0,
                 onlineUsers: 0,
@@ -1164,7 +1151,9 @@ class TornadoApp {
             if (stat === 'totalUsers') {
                 await this.loadAppStats();
             }
-        } catch (error) {}
+        } catch (error) {
+            console.warn('Update app stats error:', error);
+        }
     }
 
     async showWelcomeTasksModal() {
@@ -1344,6 +1333,7 @@ class TornadoApp {
             };
             
         } catch (error) {
+            console.warn('Verify welcome tasks error:', error);
             return {
                 success: false,
                 verified: [],
@@ -1390,6 +1380,7 @@ class TornadoApp {
             return false;
             
         } catch (error) {
+            console.warn('Check Telegram membership error:', error);
             return false;
         }
     }
@@ -1443,6 +1434,7 @@ class TornadoApp {
             
             return true;
         } catch (error) {
+            console.warn('Complete welcome tasks error:', error);
             return false;
         }
     }
@@ -1493,6 +1485,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.warn('Check referrals verification error:', error);
         }
     }
 
@@ -1515,6 +1508,7 @@ class TornadoApp {
                 this.adTimers = JSON.parse(savedTimers);
             }
         } catch (error) {
+            console.warn('Load ad timers error:', error);
             this.adTimers = {
                 ad1: 0,
                 ad2: 0
@@ -1535,19 +1529,67 @@ class TornadoApp {
             
             localStorage.setItem(`ad_timers_${this.tgUser.id}`, JSON.stringify(this.adTimers));
         } catch (error) {
+            console.warn('Save ad timers error:', error);
         }
     }
 
     setupTelegramTheme() {
         if (!this.tg) return;
         
-        this.darkMode = true;
-        document.body.classList.add('dark-mode');
+        this.darkMode = this.tg.colorScheme === 'dark';
+        this.applyTheme();
         
         this.tg.onEvent('themeChanged', () => {
-            this.darkMode = true;
-            document.body.classList.add('dark-mode');
+            this.darkMode = this.tg.colorScheme === 'dark';
+            this.applyTheme();
         });
+    }
+
+    applyTheme() {
+        const theme = this.darkMode ? this.themeConfig.DARK_MODE : this.themeConfig.LIGHT_MODE;
+        
+        // تطبيق المتغيرات على CSS
+        document.documentElement.style.setProperty('--background-color', theme.background);
+        document.documentElement.style.setProperty('--card-bg', theme.cardBg);
+        document.documentElement.style.setProperty('--card-bg-solid', theme.cardBgSolid);
+        document.documentElement.style.setProperty('--text-primary', theme.textPrimary);
+        document.documentElement.style.setProperty('--text-secondary', theme.textSecondary);
+        document.documentElement.style.setProperty('--text-light', theme.textLight);
+        document.documentElement.style.setProperty('--primary-color', theme.primaryColor);
+        document.documentElement.style.setProperty('--secondary-color', theme.secondaryColor);
+        document.documentElement.style.setProperty('--accent-color', theme.accentColor);
+        
+        // تبديل class على body
+        if (this.darkMode) {
+            document.body.classList.add('dark-mode');
+            document.body.classList.remove('light-mode');
+        } else {
+            document.body.classList.add('light-mode');
+            document.body.classList.remove('dark-mode');
+        }
+        
+        // تحديث زر تبديل الثيم
+        this.updateThemeToggleButton();
+    }
+
+    updateThemeToggleButton() {
+        if (!this.themeToggleBtn) return;
+        
+        if (this.darkMode) {
+            this.themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+            this.themeToggleBtn.title = 'Switch to Light Mode';
+        } else {
+            this.themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+            this.themeToggleBtn.title = 'Switch to Dark Mode';
+        }
+    }
+
+    toggleTheme() {
+        this.darkMode = !this.darkMode;
+        this.applyTheme();
+        
+        // حفظ التفضيل
+        localStorage.setItem('tornado_theme', this.darkMode ? 'dark' : 'light');
     }
 
     showLoadingProgress(percent) {
@@ -1618,6 +1660,7 @@ class TornadoApp {
         const userPhoto = document.getElementById('user-photo');
         const userName = document.getElementById('user-name');
         const tonBalance = document.getElementById('header-ton-balance');
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
         
         if (userPhoto) {
             userPhoto.src = this.userState.photoUrl || this.appConfig.DEFAULT_USER_AVATAR;
@@ -1625,7 +1668,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = '2px solid #3b82f6';
+            userPhoto.style.border = `2px solid ${this.darkMode ? '#3b82f6' : '#ec4899'}`;
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1636,7 +1679,7 @@ class TornadoApp {
             userName.textContent = this.truncateName(fullName, 20);
             userName.style.fontSize = '1.2rem';
             userName.style.fontWeight = '800';
-            userName.style.color = 'white';
+            userName.style.color = this.darkMode ? 'white' : '#1e293b';
             userName.style.margin = '0 0 5px 0';
             userName.style.whiteSpace = 'nowrap';
             userName.style.overflow = 'hidden';
@@ -1649,7 +1692,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = '#60a5fa';
+            tonBalance.style.color = this.darkMode ? '#60a5fa' : '#ec4899';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -1658,6 +1701,24 @@ class TornadoApp {
         const bottomNavPhoto = document.getElementById('bottom-nav-user-photo');
         if (bottomNavPhoto && this.tgUser.photo_url) {
             bottomNavPhoto.src = this.tgUser.photo_url;
+        }
+        
+        // إنشاء زر تبديل الثيم إذا لم يكن موجودًا
+        if (!themeToggleBtn) {
+            const themeBtn = document.createElement('button');
+            themeBtn.id = 'theme-toggle-btn';
+            themeBtn.className = 'theme-toggle-btn';
+            themeBtn.innerHTML = this.darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            themeBtn.title = this.darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            themeBtn.onclick = () => this.toggleTheme();
+            
+            const profileCard = document.querySelector('.profile-card');
+            if (profileCard) {
+                const profileContent = document.querySelector('.profile-content');
+                profileContent.appendChild(themeBtn);
+            }
+            
+            this.themeToggleBtn = themeBtn;
         }
     }
 
@@ -1780,7 +1841,7 @@ class TornadoApp {
                             </div>
                             <div class="ad-reward">
                                 <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
-                                <span>Reward: 0.001 TON</span>
+                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(3)} TON</span>
                             </div>
                             <button class="ad-btn ${this.isAdAvailable(1) ? 'available' : 'cooldown'}" 
                                     id="watch-ad-1-btn"
@@ -1798,7 +1859,7 @@ class TornadoApp {
                             </div>
                             <div class="ad-reward">
                                 <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
-                                <span>Reward: 0.001 TON</span>
+                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(3)} TON</span>
                             </div>
                             <button class="ad-btn ${this.isAdAvailable(2) ? 'available' : 'cooldown'}" 
                                     id="watch-ad-2-btn"
@@ -1864,6 +1925,7 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
+            console.warn('Load main tasks error:', error);
             mainTasksList.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -1896,6 +1958,7 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
+            console.warn('Load social tasks error:', error);
             socialTasksList.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -2070,6 +2133,7 @@ class TornadoApp {
             this.notificationManager.showNotification("Success", `Promo code applied! +${reward.toFixed(3)} TON`, "success");
             
         } catch (error) {
+            console.error('Handle promo code error:', error);
             this.notificationManager.showNotification("Error", "Failed to apply promo code", "error");
         } finally {
             promoBtn.innerHTML = originalText;
@@ -2190,16 +2254,18 @@ class TornadoApp {
                 this.adTimers[adTimerKey] = currentTime;
                 await this.saveAdTimers();
                 
-                const reward = 0.001;
+                const reward = this.appConfig.WATCH_AD_REWARD;
                 const currentBalance = this.safeNumber(this.userState.balance);
                 const newBalance = currentBalance + reward;
                 const newTotalAds = this.safeNumber(this.userState.totalAds) + 1;
+                const newTotalWatchAds = this.safeNumber(this.userState.totalWatchAds) + 1;
                 
                 const updates = {
                     balance: newBalance,
                     totalEarned: this.safeNumber(this.userState.totalEarned) + reward,
                     totalTasks: this.safeNumber(this.userState.totalTasks) + 1,
-                    totalAds: newTotalAds
+                    totalAds: newTotalAds,
+                    totalWatchAds: newTotalWatchAds
                 };
                 
                 if (this.db) {
@@ -2210,6 +2276,7 @@ class TornadoApp {
                 this.userState.totalEarned = this.safeNumber(this.userState.totalEarned) + reward;
                 this.userState.totalTasks = this.safeNumber(this.userState.totalTasks) + 1;
                 this.userState.totalAds = newTotalAds;
+                this.userState.totalWatchAds = newTotalWatchAds;
                 
                 this.cache.delete(`user_${this.tgUser.id}`);
                 
@@ -2227,6 +2294,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.error('Watch ad error:', error);
             this.notificationManager.showNotification("Error", "Failed to watch ad", "error");
             if (adBtn) {
                 adBtn.disabled = false;
@@ -2385,6 +2453,7 @@ class TornadoApp {
             return referralsList.sort((a, b) => b.joinedAt - a.joinedAt).slice(0, 10);
             
         } catch (error) {
+            console.warn('Load recent referrals error:', error);
             return [];
         }
     }
@@ -2435,6 +2504,7 @@ class TornadoApp {
             }
             
         } catch (error) {
+            console.warn('Refresh referrals list error:', error);
         }
     }
 
@@ -2445,6 +2515,11 @@ class TornadoApp {
         const joinDate = new Date(this.userState.createdAt || this.getServerTime());
         const formattedDate = this.formatDate(joinDate);
         const formattedTime = this.formatTime24(joinDate);
+        const totalWatchAds = this.safeNumber(this.userState.totalWatchAds || 0);
+        const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
+        const adsProgress = Math.min(totalWatchAds, requiredAds);
+        const canWithdraw = totalWatchAds >= requiredAds;
+        const adsNeeded = requiredAds - totalWatchAds;
         
         profilePage.innerHTML = `
             <div class="profile-container">
@@ -2486,8 +2561,8 @@ class TornadoApp {
                                 <i class="fas fa-ad"></i>
                             </div>
                             <div class="stat-info">
-                                <h4>Total Ads</h4>
-                                <p class="stat-value">${this.userState.totalAds || 0}</p>
+                                <h4>Total Watch Ads</h4>
+                                <p class="stat-value">${totalWatchAds}/${requiredAds}</p>
                             </div>
                         </div>
                     </div>
@@ -2497,6 +2572,18 @@ class TornadoApp {
                     <div class="withdraw-info">
                         <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
                         <p class="current-balance">Available: ${this.safeNumber(this.userState.balance).toFixed(5)} TON</p>
+                    </div>
+                    
+                    <div class="ads-requirement">
+                        <div class="ads-progress">
+                            <div class="ads-progress-bar">
+                                <div class="ads-progress-fill" style="width: ${(adsProgress/requiredAds)*100}%"></div>
+                            </div>
+                            <div class="ads-progress-text">
+                                <span>Watch Ads: ${adsProgress}/${requiredAds}</span>
+                                ${!canWithdraw ? `<span class="ads-needed">Need ${adsNeeded} more ads</span>` : ''}
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -2525,8 +2612,8 @@ class TornadoApp {
                     </div>
                     
                     <button id="profile-withdraw-btn" class="withdraw-btn" 
-                            ${this.safeNumber(this.userState.balance) < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
-                        <i class="fas fa-paper-plane"></i> WITHDRAW NOW
+                            ${!canWithdraw || this.safeNumber(this.userState.balance) < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
+                        <i class="fas fa-paper-plane"></i> ${canWithdraw ? 'WITHDRAW NOW' : `MUST WATCH ${adsProgress}/${requiredAds}`}
                     </button>
                 </div>
             </div>
@@ -2565,6 +2652,8 @@ class TornadoApp {
         const amount = parseFloat(amountInput.value);
         const userBalance = this.safeNumber(this.userState.balance);
         const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
+        const totalWatchAds = this.safeNumber(this.userState.totalWatchAds || 0);
+        const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
         
         if (!walletAddress || walletAddress.length < 20) {
             this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
@@ -2578,6 +2667,12 @@ class TornadoApp {
         
         if (amount > userBalance) {
             this.notificationManager.showNotification("Error", "Insufficient balance", "error");
+            return;
+        }
+        
+        if (totalWatchAds < requiredAds) {
+            const adsNeeded = requiredAds - totalWatchAds;
+            this.notificationManager.showNotification("Ads Required", `You need to watch ${adsNeeded} more ads to withdraw`, "error");
             return;
         }
         
@@ -2640,12 +2735,14 @@ class TornadoApp {
             const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
             const newTotalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
+            const newTotalWatchAds = Math.max(0, totalWatchAds - requiredAds); // خصم 10 إعلانات
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
                     totalWithdrawnAmount: newTotalWithdrawnAmount,
+                    totalWatchAds: newTotalWatchAds, // تحديث عدد الإعلانات
                     lastWithdrawalDate: currentTime
                 });
                 
@@ -2665,6 +2762,7 @@ class TornadoApp {
             this.userState.balance = newBalance;
             this.userState.totalWithdrawals = this.safeNumber(this.userState.totalWithdrawals) + 1;
             this.userState.totalWithdrawnAmount = newTotalWithdrawnAmount;
+            this.userState.totalWatchAds = newTotalWatchAds;
             this.userState.lastWithdrawalDate = currentTime;
             
             this.cache.delete(`user_${this.tgUser.id}`);
@@ -2680,9 +2778,10 @@ class TornadoApp {
             this.updateHeader();
             this.renderProfilePage();
             
-            this.notificationManager.showNotification("Success", "Withdrawal request submitted!", "success");
+            this.notificationManager.showNotification("Success", "Withdrawal request submitted! -10 ads deducted", "success");
             
         } catch (error) {
+            console.error('Handle withdrawal error:', error);
             this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
             withdrawBtn.disabled = false;
             withdrawBtn.innerHTML = originalText;
