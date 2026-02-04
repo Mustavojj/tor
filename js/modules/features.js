@@ -7,15 +7,8 @@ class TaskManager {
         this.partnerTasks = [];
         this.socialTasks = [];
         this.taskTimers = new Map();
-        this.TASK_PRICES = {
-            100: 0.100,
-            250: 0.250,
-            500: 0.500,
-            1000: 1.000,
-            2500: 2.500,
-            5000: 5.000
-        };
-        this.PRICE_PER_1000 = 1.00;
+        this.TASK_PRICES = APP_CONFIG.TASK_PRICES;
+        this.PRICE_PER_1000 = APP_CONFIG.PRICE_PER_1000;
     }
 
     async loadTasksData(forceRefresh = false) {
@@ -40,6 +33,7 @@ class TaskManager {
             }, 30000);
             
         } catch (error) {
+            console.warn('Load tasks data error:', error);
             this.mainTasks = [];
             this.socialTasks = [];
         }
