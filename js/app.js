@@ -306,7 +306,6 @@ class TornadoApp {
             
             this.renderUI();
             
-            // تعيين الوضع الداكن افتراضيًا
             this.darkMode = true;
             this.applyTheme();
             
@@ -669,7 +668,7 @@ class TornadoApp {
             welcomeTasksCompleted: false,
             isNewUser: false,
             totalWithdrawnAmount: 0,
-            totalWatchAds: 0 // إضافة متغير جديد لمشاهدات الإعلانات
+            totalWatchAds: 0
         };
     }
 
@@ -740,7 +739,7 @@ class TornadoApp {
             welcomeTasksCompletedAt: null,
             isNewUser: true,
             totalWithdrawnAmount: 0,
-            totalWatchAds: 0 // إضافة متغير جديد
+            totalWatchAds: 0
         };
         
         await userRef.set(userData);
@@ -897,7 +896,7 @@ class TornadoApp {
             welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null,
             isNewUser: userData.isNewUser || false,
             totalWithdrawnAmount: userData.totalWithdrawnAmount || 0,
-            totalWatchAds: userData.totalWatchAds || 0 // إضافة متغير جديد
+            totalWatchAds: userData.totalWatchAds || 0
         };
         
         const updates = {};
@@ -1544,7 +1543,6 @@ class TornadoApp {
     applyTheme() {
         const theme = this.darkMode ? this.themeConfig.DARK_MODE : this.themeConfig.LIGHT_MODE;
         
-        // تطبيق المتغيرات على CSS
         document.documentElement.style.setProperty('--background-color', theme.background);
         document.documentElement.style.setProperty('--card-bg', theme.cardBg);
         document.documentElement.style.setProperty('--card-bg-solid', theme.cardBgSolid);
@@ -1555,7 +1553,6 @@ class TornadoApp {
         document.documentElement.style.setProperty('--secondary-color', theme.secondaryColor);
         document.documentElement.style.setProperty('--accent-color', theme.accentColor);
         
-        // تبديل class على body
         if (this.darkMode) {
             document.body.classList.add('dark-mode');
             document.body.classList.remove('light-mode');
@@ -1564,7 +1561,6 @@ class TornadoApp {
             document.body.classList.remove('dark-mode');
         }
         
-        // تحديث زر تبديل الثيم
         this.updateThemeToggleButton();
     }
 
@@ -1584,7 +1580,6 @@ class TornadoApp {
         this.darkMode = !this.darkMode;
         this.applyTheme();
         
-        // حفظ التفضيل
         localStorage.setItem('tornado_theme', this.darkMode ? 'dark' : 'light');
     }
 
@@ -1699,7 +1694,6 @@ class TornadoApp {
             bottomNavPhoto.src = this.tgUser.photo_url;
         }
         
-        // إنشاء زر تبديل الثيم إذا لم يكن موجودًا
         if (!themeToggleBtn) {
             const themeBtn = document.createElement('button');
             themeBtn.id = 'theme-toggle-btn';
@@ -2242,7 +2236,13 @@ class TornadoApp {
                 }
             } else if (adNumber === 2) {
                 if (typeof show_10558486 !== 'undefined') {
-                    adShown = await show_10558486();
+                    try {
+                        await show_10558486('pop');
+                        adShown = true;
+                    } catch (error) {
+                        console.warn('Ad #2 error:', error);
+                        adShown = false;
+                    }
                 }
             }
             
@@ -2551,16 +2551,6 @@ class TornadoApp {
                                 <p class="stat-value">${this.userState.totalTasksCompleted || 0}</p>
                             </div>
                         </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-ad"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h4>Total Watch Ads</h4>
-                                <p class="stat-value">${totalWatchAds}/${requiredAds}</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
@@ -2731,14 +2721,14 @@ class TornadoApp {
             const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
             const newTotalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
-            const newTotalWatchAds = Math.max(0, totalWatchAds - requiredAds); // خصم 10 إعلانات
+            const newTotalWatchAds = Math.max(0, totalWatchAds - requiredAds);
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
                     totalWithdrawnAmount: newTotalWithdrawnAmount,
-                    totalWatchAds: newTotalWatchAds, // تحديث عدد الإعلانات
+                    totalWatchAds: newTotalWatchAds,
                     lastWithdrawalDate: currentTime
                 });
                 
