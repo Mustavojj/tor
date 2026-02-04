@@ -1,6 +1,6 @@
 const APP_CONFIG = {
-    APP_NAME: "TORNADO", 
-    BOT_USERNAME: "Tornado_Rbot", 
+    APP_NAME: "Tornado",
+    BOT_USERNAME: "Tornado_Rbot",
     MINIMUM_WITHDRAW: 0.10,
     REFERRAL_BONUS_TON: 0.01,
     REFERRAL_PERCENTAGE: 10,
@@ -8,6 +8,8 @@ const APP_CONFIG = {
     TASK_REWARD_BONUS: 0,
     MAX_DAILY_ADS: 999999,
     AD_COOLDOWN: 600000,
+    DEFAULT_USER_AVATAR: "https://cdn-icons-png.flaticon.com/512/9195/9195920.png",
+    BOT_AVATAR: "https://i.ibb.co/GvWFRrnp/ninja.png",
     WELCOME_TASKS: [
         {
             name: "Join Tornado Channel",
