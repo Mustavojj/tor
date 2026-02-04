@@ -47,8 +47,7 @@ export const APP_CONFIG = {
                 url: "https://t.me/TORNADO_CHNL"
             }
         ]
-    },
-    
+    }
 };
 
 export const CORE_CONFIG = {
@@ -83,9 +82,9 @@ export const THEME_CONFIG = {
         textPrimary: "#1e293b",
         textSecondary: "#475569",
         textLight: "#64748b",
-        primaryColor: "#ec4899", 
-        secondaryColor: "#db2777",
-        accentColor: "#f472b6"
+        primaryColor: "#3b82f6",
+        secondaryColor: "#1e40af",
+        accentColor: "#60a5fa"
     },
     DARK_MODE: {
         background: "#000000",
@@ -94,7 +93,7 @@ export const THEME_CONFIG = {
         textPrimary: "#f1f5f9",
         textSecondary: "#cbd5e1",
         textLight: "#94a3b8",
-        primaryColor: "#1e3a8a", 
+        primaryColor: "#1e3a8a",
         secondaryColor: "#1e40af",
         accentColor: "#3b82f6"
     }
