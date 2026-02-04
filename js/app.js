@@ -219,10 +219,6 @@ class TornadoApp {
             
             this.telegramVerified = await this.verifyTelegramUser();
             
-            if (!this.telegramVerified) {
-                this.showError("Telegram verification failed");
-                return;
-            }
             
             this.showLoadingProgress(25);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
