@@ -219,7 +219,6 @@ class TornadoApp {
             
             this.telegramVerified = await this.verifyTelegramUser();
             
-            
             this.showLoadingProgress(25);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
             if (!multiAccountAllowed) {
@@ -306,7 +305,7 @@ class TornadoApp {
             
             this.renderUI();
             
-            this.darkMode = true;
+            this.darkMode = this.userState.theme === 'dark' ? true : false;
             this.applyTheme();
             
             this.isInitialized = true;
@@ -668,7 +667,8 @@ class TornadoApp {
             welcomeTasksCompleted: false,
             isNewUser: false,
             totalWithdrawnAmount: 0,
-            totalWatchAds: 0
+            totalWatchAds: 0,
+            theme: 'dark'
         };
     }
 
@@ -739,7 +739,8 @@ class TornadoApp {
             welcomeTasksCompletedAt: null,
             isNewUser: true,
             totalWithdrawnAmount: 0,
-            totalWatchAds: 0
+            totalWatchAds: 0,
+            theme: 'dark'
         };
         
         await userRef.set(userData);
@@ -896,7 +897,8 @@ class TornadoApp {
             welcomeTasksCompletedAt: userData.welcomeTasksCompletedAt || null,
             isNewUser: userData.isNewUser || false,
             totalWithdrawnAmount: userData.totalWithdrawnAmount || 0,
-            totalWatchAds: userData.totalWatchAds || 0
+            totalWatchAds: userData.totalWatchAds || 0,
+            theme: userData.theme || 'dark'
         };
         
         const updates = {};
@@ -932,6 +934,114 @@ class TornadoApp {
         }
         
         return null;
+    }
+
+    async checkBotAdminStatus(chatId) {
+        try {
+            if (!this.tgUser?.id) return false;
+            
+            const response = await fetch('/api/telegram-bot', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': this.tgUser.id.toString(),
+                    'x-telegram-hash': this.tg?.initData || ''
+                },
+                body: JSON.stringify({
+                    action: 'getChatAdministrators',
+                    params: { chat_id: chatId }
+                })
+            });
+            
+            if (!response.ok) {
+                console.error('Bot admin check failed');
+                return false;
+            }
+            
+            const data = await response.json();
+            if (data.ok && data.result) {
+                const admins = data.result;
+                const isBotAdmin = admins.some(admin => {
+                    const isBot = admin.user?.is_bot;
+                    const isThisBot = admin.user?.username === this.appConfig.BOT_USERNAME;
+                    return isBot && isThisBot;
+                });
+                return isBotAdmin;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking bot admin status:', error);
+            return false;
+        }
+    }
+    
+    async checkUserMembershipWithBot(chatId) {
+        try {
+            const userId = this.tgUser?.id;
+            if (!userId) return false;
+            
+            const response = await fetch('/api/telegram-bot', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': userId.toString(),
+                    'x-telegram-hash': this.tg?.initData || ''
+                },
+                body: JSON.stringify({
+                    action: 'getChatMember',
+                    params: {
+                        chat_id: chatId,
+                        user_id: userId
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                console.error('Telegram API request failed');
+                return false;
+            }
+            
+            const data = await response.json();
+            if (!data.ok || !data.result) {
+                console.error('Telegram API response not ok:', data);
+                return false;
+            }
+            
+            const userStatus = data.result.status;
+            const isMember = ['member', 'administrator', 'creator', 'restricted'].includes(userStatus);
+            
+            console.log(`User ${userId} membership status in ${chatId}: ${userStatus} -> ${isMember}`);
+            return isMember;
+        } catch (error) {
+            console.error('Error checking user membership with bot:', error);
+            return false;
+        }
+    }
+
+    extractChatIdFromUrl(url) {
+        try {
+            if (!url) return null;
+            
+            url = url.toString().trim();
+            
+            if (url.includes('t.me/')) {
+                const match = url.match(/t\.me\/([^\/\?]+)/);
+                if (match && match[1]) {
+                    const username = match[1];
+                    
+                    if (username.startsWith('@')) return username;
+                    
+                    if (/^[a-zA-Z][a-zA-Z0-9_]{4,}$/.test(username)) return '@' + username;
+                    
+                    return username;
+                }
+            }
+            
+            return null;
+            
+        } catch (error) {
+            return null;
+        }
     }
 
     async processReferralRegistrationWithBonus(referrerId, newUserId) {
@@ -1531,8 +1641,25 @@ class TornadoApp {
     setupTelegramTheme() {
         if (!this.tg) return;
         
-        this.darkMode = this.tg.colorScheme === 'dark';
-        this.applyTheme();
+        // جلب الوضع المحفوظ من قاعدة البيانات أو localStorage
+        if (this.db && this.tgUser) {
+            this.db.ref(`users/${this.tgUser.id}/theme`).once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    this.darkMode = snapshot.val() === 'dark';
+                } else {
+                    this.darkMode = this.tg.colorScheme === 'dark';
+                }
+                this.applyTheme();
+            }).catch(() => {
+                const savedTheme = localStorage.getItem('tornado_theme');
+                this.darkMode = savedTheme ? savedTheme === 'dark' : this.tg.colorScheme === 'dark';
+                this.applyTheme();
+            });
+        } else {
+            const savedTheme = localStorage.getItem('tornado_theme');
+            this.darkMode = savedTheme ? savedTheme === 'dark' : this.tg.colorScheme === 'dark';
+            this.applyTheme();
+        }
         
         this.tg.onEvent('themeChanged', () => {
             this.darkMode = this.tg.colorScheme === 'dark';
@@ -1580,16 +1707,19 @@ class TornadoApp {
         this.darkMode = !this.darkMode;
         this.applyTheme();
         
+        // حفظ في localStorage
         localStorage.setItem('tornado_theme', this.darkMode ? 'dark' : 'light');
+        
+        // حفظ في قاعدة البيانات إذا كان متاحًا
+        if (this.db && this.tgUser) {
+            this.db.ref(`users/${this.tgUser.id}`).update({
+                theme: this.darkMode ? 'dark' : 'light',
+                themeUpdatedAt: this.getServerTime()
+            }).catch(console.warn);
+        }
     }
 
     showLoadingProgress(percent) {
-        const progressBar = document.getElementById('loading-progress-bar');
-        if (progressBar) {
-            progressBar.style.width = percent + '%';
-            progressBar.style.transition = 'width 0.3s ease';
-        }
-        
         const loadingPercentage = document.getElementById('loading-percentage');
         if (loadingPercentage) {
             loadingPercentage.textContent = `${percent}%`;
@@ -1659,7 +1789,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = `2px solid ${this.darkMode ? '#3b82f6' : '#ec4899'}`;
+            userPhoto.style.border = `2px solid ${this.darkMode ? '#3b82f6' : '#1e40af'}`;
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1670,7 +1800,7 @@ class TornadoApp {
             userName.textContent = this.truncateName(fullName, 20);
             userName.style.fontSize = '1.2rem';
             userName.style.fontWeight = '800';
-            userName.style.color = this.darkMode ? 'white' : '#1e293b';
+            userName.style.color = this.darkMode ? 'white' : '#1e40af';
             userName.style.margin = '0 0 5px 0';
             userName.style.whiteSpace = 'nowrap';
             userName.style.overflow = 'hidden';
@@ -1683,7 +1813,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = this.darkMode ? '#60a5fa' : '#ec4899';
+            tonBalance.style.color = this.darkMode ? '#60a5fa' : '#1e40af';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -2154,9 +2284,327 @@ class TornadoApp {
                 
                 if (taskId && taskUrl) {
                     e.preventDefault();
-                    await this.taskManager.handleTask(taskId, taskUrl, taskType, taskReward, btn);
+                    await this.handleTask(taskId, taskUrl, taskType, taskReward, btn);
                 }
             });
+        });
+    }
+
+    async handleTask(taskId, url, taskType, reward, button) {
+        if (this.userCompletedTasks.has(taskId)) {
+            this.notificationManager.showNotification("Already Completed", "You have already completed this task", "info");
+            return;
+        }
+        
+        if (this.isProcessingTask) {
+            this.notificationManager.showNotification("Busy", "Please complete current task first", "warning");
+            return;
+        }
+        
+        const rateLimitCheck = this.rateLimiter.checkLimit(this.tgUser.id, 'task_start');
+        if (!rateLimitCheck.allowed) {
+            this.notificationManager.showNotification(
+                "Rate Limit", 
+                `Please wait ${rateLimitCheck.remaining} seconds before starting another task`, 
+                "warning"
+            );
+            return;
+        }
+        
+        this.rateLimiter.addRequest(this.tgUser.id, 'task_start');
+        
+        window.open(url, '_blank');
+        
+        this.disableAllTaskButtons();
+        this.isProcessingTask = true;
+        
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wait 10s';
+        button.disabled = true;
+        button.classList.remove('start');
+        button.classList.add('counting');
+        
+        let secondsLeft = 10;
+        const countdown = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft > 0) {
+                button.innerHTML = `<i class="fas fa-clock"></i> ${secondsLeft}s`;
+            } else {
+                clearInterval(countdown);
+                button.innerHTML = 'CHECK';
+                button.disabled = false;
+                button.classList.remove('counting');
+                button.classList.add('check');
+                
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                newButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await this.handleCheckTask(taskId, url, taskType, reward, newButton);
+                });
+            }
+        }, 1000);
+        
+        setTimeout(() => {
+            if (secondsLeft > 0) {
+                clearInterval(countdown);
+                button.innerHTML = originalText;
+                button.disabled = false;
+                button.classList.remove('counting');
+                button.classList.add('start');
+                this.enableAllTaskButtons();
+                this.isProcessingTask = false;
+            }
+        }, 11000);
+    }
+
+    async handleCheckTask(taskId, url, taskType, reward, button) {
+        if (button) {
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            button.disabled = true;
+        }
+        
+        this.disableAllTaskButtons();
+        this.isProcessingTask = true;
+        
+        try {
+            let task = null;
+            for (const t of [...this.mainTasks, ...this.socialTasks]) {
+                if (t.id === taskId) {
+                    task = t;
+                    break;
+                }
+            }
+            
+            if (!task) {
+                throw new Error("Task not found");
+            }
+            
+            const chatId = this.extractChatIdFromUrl(url);
+            
+            if (task.type === 'channel' || task.type === 'group') {
+                if (chatId) {
+                    const isBotAdmin = await this.checkBotAdminStatus(chatId);
+                    
+                    if (isBotAdmin) {
+                        console.log(`Bot is admin in ${chatId}, checking user membership...`);
+                        const isSubscribed = await this.checkUserMembershipWithBot(chatId);
+                        
+                        if (isSubscribed) {
+                            console.log(`User is subscribed to ${chatId}, completing task...`);
+                            await this.completeTask(taskId, taskType, task.reward, button);
+                        } else {
+                            console.log(`User is NOT subscribed to ${chatId}`);
+                            this.notificationManager.showNotification(
+                                "Join Required", 
+                                "You need to join the channel/group first!", 
+                                "error"
+                            );
+                            
+                            this.enableAllTaskButtons();
+                            this.isProcessingTask = false;
+                            
+                            if (button) {
+                                button.innerHTML = 'Try Again';
+                                button.disabled = false;
+                                button.classList.remove('check');
+                                button.classList.add('start');
+                                
+                                const newButton = button.cloneNode(true);
+                                button.parentNode.replaceChild(newButton, button);
+                                
+                                newButton.addEventListener('click', async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    await this.handleTask(taskId, url, taskType, task.reward, newButton);
+                                });
+                            }
+                        }
+                    } else {
+                        console.log(`Bot is NOT admin in ${chatId}, skipping verification`);
+                        setTimeout(async () => {
+                            this.notificationManager.showNotification(
+                                "Task Completed!", 
+                                `You have received ${task.reward.toFixed(5)} TON`, 
+                                "success"
+                            );
+                            
+                            await this.completeTask(taskId, taskType, task.reward, button);
+                        }, 500);
+                    }
+                } else {
+                    console.log(`Could not extract chat ID from URL: ${url}`);
+                    setTimeout(async () => {
+                        this.notificationManager.showNotification(
+                            "Task Completed!", 
+                            `You have received ${task.reward.toFixed(5)} TON`, 
+                            "success"
+                        );
+                        
+                        await this.completeTask(taskId, taskType, task.reward, button);
+                    }, 500);
+                }
+            } else {
+                console.log(`Task type is not channel/group, completing directly`);
+                await this.completeTask(taskId, taskType, task.reward, button);
+            }
+            
+        } catch (error) {
+            console.error('Error in handleCheckTask:', error);
+            this.enableAllTaskButtons();
+            this.isProcessingTask = false;
+            
+            if (button) {
+                button.innerHTML = 'Try Again';
+                button.disabled = false;
+                button.classList.remove('check');
+                button.classList.add('start');
+                
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                newButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await this.handleTask(taskId, url, taskType, reward, newButton);
+                });
+            }
+            
+            this.notificationManager.showNotification("Error", "Failed to verify task completion", "error");
+        }
+    }
+
+    async completeTask(taskId, taskType, reward, button) {
+        try {
+            if (!this.db) return false;
+            
+            let task = null;
+            for (const t of [...this.mainTasks, ...this.socialTasks]) {
+                if (t.id === taskId) {
+                    task = t;
+                    break;
+                }
+            }
+            
+            if (!task) {
+                throw new Error("Task not found");
+            }
+            
+            const taskReward = this.safeNumber(reward);
+            
+            const currentBalance = this.safeNumber(this.userState.balance);
+            const totalEarned = this.safeNumber(this.userState.totalEarned);
+            const totalTasks = this.safeNumber(this.userState.totalTasks);
+            
+            if (this.userCompletedTasks.has(taskId)) {
+                this.notificationManager.showNotification("Already Completed", "This task was already completed", "info");
+                return false;
+            }
+            
+            const currentTime = this.getServerTime();
+            
+            const updates = {};
+            updates.balance = currentBalance + taskReward;
+            updates.totalEarned = totalEarned + taskReward;
+            updates.totalTasks = totalTasks + 1;
+            updates.totalTasksCompleted = (this.userState.totalTasksCompleted || 0) + 1;
+            
+            this.userCompletedTasks.add(taskId);
+            updates.completedTasks = [...this.userCompletedTasks];
+            
+            await this.db.ref(`users/${this.tgUser.id}`).update(updates);
+            
+            await this.db.ref(`config/tasks/${taskId}/currentCompletions`).transaction(current => {
+                const newValue = (current || 0) + 1;
+                
+                if (newValue >= task.maxCompletions) {
+                    this.db.ref(`config/tasks/${taskId}`).update({
+                        status: 'completed',
+                        taskStatus: 'completed'
+                    });
+                }
+                
+                return newValue;
+            });
+            
+            this.userState.balance = currentBalance + taskReward;
+            this.userState.totalEarned = totalEarned + taskReward;
+            this.userState.totalTasks = totalTasks + 1;
+            this.userState.totalTasksCompleted = (this.userState.totalTasksCompleted || 0) + 1;
+            this.userState.completedTasks = [...this.userCompletedTasks];
+            
+            if (button) {
+                const taskCard = document.getElementById(`task-${taskId}`);
+                if (taskCard) {
+                    const taskBtn = taskCard.querySelector('.task-btn');
+                    if (taskBtn) {
+                        taskBtn.innerHTML = 'COMPLETED';
+                        taskBtn.className = 'task-btn completed';
+                        taskBtn.disabled = true;
+                        taskCard.classList.add('task-completed');
+                    }
+                }
+            }
+            
+            this.updateHeader();
+            this.renderProfilePage();
+            
+            await this.updateAppStats('totalTasks', 1);
+            
+            this.cache.delete(`tasks_${this.tgUser.id}`);
+            this.cache.delete(`user_${this.tgUser.id}`);
+
+            if (this.userState.referredBy) {
+                await this.processReferralTaskBonus(this.userState.referredBy, taskReward);
+            }
+            
+            this.enableAllTaskButtons();
+            this.isProcessingTask = false;
+
+            this.notificationManager.showNotification(
+                "Task Completed!", 
+                `+${taskReward.toFixed(5)} TON`, 
+                "success"
+            );
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Error in completeTask:', error);
+            this.enableAllTaskButtons();
+            this.isProcessingTask = false;
+            
+            if (button) {
+                button.innerHTML = 'Try Again';
+                button.disabled = false;
+                button.classList.remove('check', 'completed');
+                button.classList.add('start');
+                
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                newButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await this.handleTask(taskId, url, taskType, reward, newButton);
+                });
+            }
+            
+            throw error;
+        }
+    }
+
+    disableAllTaskButtons() {
+        document.querySelectorAll('.task-btn:not(.completed):not(.counting):not(:disabled)').forEach(btn => {
+            btn.disabled = true;
+        });
+    }
+
+    enableAllTaskButtons() {
+        document.querySelectorAll('.task-btn:not(.completed):not(.counting)').forEach(btn => {
+            btn.disabled = false;
         });
     }
 
