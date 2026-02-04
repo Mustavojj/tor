@@ -67,36 +67,73 @@ body {
     z-index: 9999;
 }
 
-.loading-logo {
-    width: 100px;
-    height: 100px;
-    margin-bottom: 20px;
-    position: relative;
+.loading-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 25px 20px;
+    width: 90%;
+    max-width: 280px;
+    text-align: center;
+    border: 2px solid var(--card-border);
+    box-shadow: var(--shadow);
 }
 
-.loading-logo img {
+.loading-card-header {
+    margin-bottom: 25px;
+}
+
+.loading-card-logo-container {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 15px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid #3b82f6;
+}
+
+.loading-card-logo {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
 }
 
-.loading-spinner {
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    right: -10px;
-    bottom: -10px;
-    border: 3px solid transparent;
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.loading-card-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #3b82f6;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.loading-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.loading-progress-container {
+    width: 100%;
+    height: 6px;
+    background: var(--background-color);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+}
+
+.loading-progress-bar {
+    height: 100%;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    width: 0%;
+    transition: width 0.3s ease;
 }
 
 .loading-percentage {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #3b82f6;
     font-family: monospace;
+    margin: 0;
 }
 
 #app {
@@ -129,6 +166,7 @@ body {
     justify-content: space-between;
     border: 2px solid var(--card-border);
     margin-bottom: 20px;
+    backdrop-filter: blur(10px);
 }
 
 .profile-content {
@@ -217,6 +255,7 @@ body {
     z-index: 100;
     border-radius: var(--border-radius);
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .nav-btn {
@@ -264,6 +303,7 @@ body {
     padding: 4px;
     margin: 0 0 20px;
     border: 1px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .tab-btn {
@@ -317,38 +357,40 @@ body {
 .more-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
     margin-top: 10px;
 }
 
 .square-card {
     background: var(--card-bg);
     border-radius: var(--border-radius);
-    padding: 15px;
+    padding: 12px;
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
+    min-height: 120px;
 }
 
 .promo-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .promo-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     background: linear-gradient(135deg, #3b82f6, #1e40af);
-    border-radius: 10px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .promo-header h3 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
@@ -356,14 +398,14 @@ body {
 
 .promo-input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 10px 12px;
     background: var(--background-color);
     border: 1px solid var(--card-border);
-    border-radius: 10px;
-    font-size: 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
     color: var(--text-primary);
     outline: none;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     box-sizing: border-box;
 }
 
@@ -374,18 +416,18 @@ body {
 
 .promo-btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     background: linear-gradient(135deg, #3b82f6, #1e40af);
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     color: white;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .promo-btn:disabled {
@@ -400,58 +442,58 @@ body {
 .ad-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .ad-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     background: linear-gradient(135deg, #3b82f6, #1e40af);
-    border-radius: 10px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .ad-title {
     font-weight: 700;
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
 .ad-reward {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: var(--background-color);
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 10px;
     border: 1px solid var(--card-border);
 }
 
 .ad-reward img {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     object-fit: contain;
 }
 
 .ad-reward span {
     color: var(--text-primary);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .ad-btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
 }
 
@@ -482,6 +524,7 @@ body {
     border-radius: var(--border-radius-sm);
     padding: 12px;
     border: 1px solid var(--card-border);
+    backdrop-filter: blur(5px);
 }
 
 .referral-row-avatar {
@@ -592,6 +635,7 @@ body {
     border-radius: var(--border-radius);
     padding: 20px;
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .referral-link-box {
@@ -653,6 +697,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    backdrop-filter: blur(5px);
 }
 
 .info-icon {
@@ -691,6 +736,7 @@ body {
     border-radius: var(--border-radius);
     padding: 20px;
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .referral-stats-section h3 {
@@ -715,6 +761,7 @@ body {
     padding: 15px;
     border: 1px solid var(--card-border);
     text-align: center;
+    backdrop-filter: blur(5px);
 }
 
 .stat-icon {
@@ -769,6 +816,7 @@ body {
     background: var(--card-bg);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--card-border);
+    backdrop-filter: blur(5px);
 }
 
 .no-data i {
@@ -800,6 +848,7 @@ body {
     border-radius: var(--border-radius);
     padding: 20px;
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .profile-stats-section h3 {
@@ -814,8 +863,13 @@ body {
 
 .profile-stats-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
     gap: 12px;
+}
+
+.stat-card:nth-child(4) {
+    display: none;
 }
 
 .withdraw-card {
@@ -823,6 +877,7 @@ body {
     border-radius: var(--border-radius);
     padding: 20px;
     border: 2px solid var(--card-border);
+    backdrop-filter: blur(10px);
 }
 
 .withdraw-info {
