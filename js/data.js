@@ -11,7 +11,7 @@ export const APP_CONFIG = {
     AD_COOLDOWN: 60000,
     WATCH_AD_REWARD: 0.001,
     REQUIRED_ADS_FOR_WITHDRAWAL: 10,
-    DEFAULT_USER_AVATAR: "https://cdn-icons-png.flaticon.com/512/9195/9195920.png",
+    DEFAULT_USER_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
     BOT_AVATAR: "https://i.ibb.co/GvWFRrnp/ninja.png",
     WELCOME_TASKS: [
         {
