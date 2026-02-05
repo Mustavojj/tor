@@ -7,8 +7,6 @@ class TaskManager {
         this.partnerTasks = [];
         this.socialTasks = [];
         this.taskTimers = new Map();
-        this.TASK_PRICES = APP_CONFIG.TASK_PRICES;
-        this.PRICE_PER_1000 = APP_CONFIG.PRICE_PER_1000;
     }
 
     async loadTasksData(forceRefresh = false) {
@@ -108,54 +106,114 @@ class TaskManager {
         return this.socialTasks;
     }
 
-    async addNewTask(taskData) {
+    async verifyTaskCompletion(taskId, chatId, userId, initData) {
         try {
-            const { name, url, target, checkEnabled, price } = taskData;
+            const response = await fetch('/api/telegram-bot', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': userId.toString(),
+                    'x-telegram-hash': initData || ''
+                },
+                body: JSON.stringify({
+                    action: 'getChatMember',
+                    params: {
+                        chat_id: chatId,
+                        user_id: userId
+                    }
+                })
+            });
             
-            if (this.app.userState.balance < price) {
-                this.app.notificationManager.showNotification("Error", "Insufficient balance", "error");
+            if (!response.ok) {
+                return { success: false, message: "Telegram API request failed" };
+            }
+            
+            const data = await response.json();
+            
+            if (!data.ok || !data.result) {
+                return { success: false, message: "Telegram API response error" };
+            }
+            
+            const userStatus = data.result.status;
+            const isMember = ['member', 'administrator', 'creator', 'restricted'].includes(userStatus);
+            
+            if (isMember) {
+                const isBotAdmin = await this.checkBotAdminStatus(chatId, userId, initData);
+                
+                if (isBotAdmin) {
+                    return { success: true, message: "Task verified successfully" };
+                } else {
+                    return { success: true, message: "Task verified (bot not admin)" };
+                }
+            } else {
+                return { success: false, message: "Please join the channel/group first" };
+            }
+            
+        } catch (error) {
+            console.error('Task verification error:', error);
+            return { success: false, message: "Verification failed: " + error.message };
+        }
+    }
+
+    async checkBotAdminStatus(chatId, userId, initData) {
+        try {
+            const response = await fetch('/api/telegram-bot', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-user-id': userId.toString(),
+                    'x-telegram-hash': initData || ''
+                },
+                body: JSON.stringify({
+                    action: 'getChatAdministrators',
+                    params: { chat_id: chatId }
+                })
+            });
+            
+            if (!response.ok) {
                 return false;
             }
             
-            const newBalance = this.app.userState.balance - price;
-            
-            if (this.app.db) {
-                await this.app.db.ref(`users/${this.app.tgUser.id}`).update({
-                    balance: newBalance
+            const data = await response.json();
+            if (data.ok && data.result) {
+                const admins = data.result;
+                const isBotAdmin = admins.some(admin => {
+                    const isBot = admin.user?.is_bot;
+                    const isThisBot = admin.user?.username === this.app.appConfig.BOT_USERNAME;
+                    return isBot && isThisBot;
                 });
-                
-                const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                const newTask = {
-                    id: taskId,
-                    name: name,
-                    url: url,
-                    type: 'channel',
-                    category: 'main',
-                    reward: 0.001,
-                    currentCompletions: 0,
-                    maxCompletions: target,
-                    status: 'active',
-                    taskStatus: 'active',
-                    createdBy: this.app.tgUser.id,
-                    createdAt: this.app.getServerTime(),
-                    checkEnabled: checkEnabled || false
-                };
-                
-                await this.app.db.ref(`config/tasks/${taskId}`).set(newTask);
-                
-                this.app.userState.balance = newBalance;
-                this.app.updateHeader();
-                this.app.renderProfilePage();
-                
-                return true;
+                return isBotAdmin;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking bot admin status:', error);
+            return false;
+        }
+    }
+
+    extractChatIdFromUrl(url) {
+        try {
+            if (!url) return null;
+            
+            url = url.toString().trim();
+            
+            if (url.includes('t.me/')) {
+                const match = url.match(/t\.me\/([^\/\?]+)/);
+                if (match && match[1]) {
+                    const username = match[1];
+                    
+                    if (username.startsWith('@')) return username;
+                    
+                    if (/^[a-zA-Z][a-zA-Z0-9_]{4,}$/.test(username)) return '@' + username;
+                    
+                    return username;
+                }
             }
             
-            return false;
+            return null;
             
         } catch (error) {
-            console.error('Error adding new task:', error);
-            return false;
+            return null;
         }
     }
 }
@@ -185,7 +243,102 @@ class ReferralManager {
     }
 
     async loadRecentReferrals() {
-        return;
+        try {
+            if (!this.app.db) return [];
+            
+            const referralsRef = await this.app.db.ref(`referrals/${this.app.tgUser.id}`).once('value');
+            if (!referralsRef.exists()) return [];
+            
+            const referralsList = [];
+            referralsRef.forEach(child => {
+                const referralData = child.val();
+                if (referralData && typeof referralData === 'object') {
+                    referralsList.push({
+                        id: child.key,
+                        ...referralData
+                    });
+                }
+            });
+            
+            this.recentReferrals = referralsList.sort((a, b) => b.joinedAt - a.joinedAt).slice(0, 10);
+            
+            return this.recentReferrals;
+            
+        } catch (error) {
+            console.warn('Load recent referrals error:', error);
+            return [];
+        }
+    }
+
+    async refreshReferralsList() {
+        try {
+            if (!this.app.db || !this.app.tgUser) return;
+            
+            const referralsRef = await this.app.db.ref(`referrals/${this.app.tgUser.id}`).once('value');
+            if (!referralsRef.exists()) return;
+            
+            const referrals = referralsRef.val();
+            const verifiedReferrals = [];
+            
+            for (const referralId in referrals) {
+                const referral = referrals[referralId];
+                if (referral.state === 'verified' && referral.bonusGiven) {
+                    verifiedReferrals.push({
+                        id: referralId,
+                        ...referral
+                    });
+                }
+            }
+            
+            this.app.userState.referrals = verifiedReferrals.length;
+            
+            if (document.getElementById('referrals-page')?.classList.contains('active')) {
+                this.app.renderReferralsPage();
+            }
+            
+        } catch (error) {
+            console.warn('Refresh referrals list error:', error);
+        }
+    }
+
+    async checkReferralsVerification() {
+        try {
+            if (!this.app.db || !this.app.tgUser) return;
+            
+            const referralsRef = await this.app.db.ref(`referrals/${this.app.tgUser.id}`).once('value');
+            if (!referralsRef.exists()) return;
+            
+            const referrals = referralsRef.val();
+            let updated = false;
+            
+            for (const referralId in referrals) {
+                const referral = referrals[referralId];
+                
+                if (referral.state === 'pending') {
+                    const newUserRef = await this.app.db.ref(`users/${referralId}`).once('value');
+                    if (newUserRef.exists()) {
+                        const newUserData = newUserRef.val();
+                        
+                        if (newUserData.welcomeTasksCompleted) {
+                            await this.app.processReferralRegistrationWithBonus(this.app.tgUser.id, referralId);
+                            updated = true;
+                        }
+                    }
+                }
+            }
+            
+            if (updated) {
+                this.app.cache.delete(`user_${this.app.tgUser.id}`);
+                this.app.cache.delete(`referrals_${this.app.tgUser.id}`);
+                
+                if (document.getElementById('referrals-page')?.classList.contains('active')) {
+                    this.app.renderReferralsPage();
+                }
+            }
+            
+        } catch (error) {
+            console.warn('Check referrals verification error:', error);
+        }
     }
 
     async handleReferralBonus(referralId) {
