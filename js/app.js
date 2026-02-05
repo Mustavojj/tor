@@ -81,11 +81,9 @@ class TornadoApp {
         this.telegramVerified = false;
         this.themeToggleBtn = null;
         
-        // فك تشفير التوكن
         this.botToken = this.decryptBotToken();
     }
 
-    // دالة لفك تشفير التوكن
     decryptBotToken() {
         try {
             const encrypted = this.appConfig.BOT_TOKEN_ENCRYPTED;
@@ -97,14 +95,12 @@ class TornadoApp {
         }
     }
 
-    // دالة التحقق من Telegram (بدون API)
     async verifyTelegramUser() {
         try {
             if (!this.tg?.initData) {
                 return false;
             }
 
-            // فحص بسيط للبيانات (بدون تحقق كامل من السيرفر)
             const params = new URLSearchParams(this.tg.initData);
             const hash = params.get('hash');
             
@@ -437,7 +433,6 @@ class TornadoApp {
                 if (response.ok) {
                     const result = await response.json();
                     if (result.encrypted) {
-                        // فك تشفير بيانات Firebase
                         const decoded = atob(result.encrypted);
                         firebaseConfig = JSON.parse(decoded);
                     } else {
@@ -1221,7 +1216,7 @@ class TornadoApp {
                     
                     window.open(url, '_blank');
                     
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening...';
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     btn.disabled = true;
                     
                     setTimeout(async () => {
@@ -1229,7 +1224,7 @@ class TornadoApp {
                             const isMember = await app.checkTelegramMembership(channel);
                             
                             if (isMember) {
-                                btn.innerHTML = '<i class="fas fa-check"></i> Checked';
+                                btn.innerHTML = '<i class="fas fa-check"></i> Verified';
                                 btn.classList.add('completed');
                                 clickedTasks[index] = true;
                             } else {
@@ -2249,10 +2244,13 @@ class TornadoApp {
         
         try {
             let task = null;
-            for (const t of [...this.mainTasks, ...this.socialTasks]) {
-                if (t.id === taskId) {
-                    task = t;
-                    break;
+            if (this.taskManager) {
+                const allTasks = [...(this.taskManager.mainTasks || []), ...(this.taskManager.socialTasks || [])];
+                for (const t of allTasks) {
+                    if (t.id === taskId) {
+                        task = t;
+                        break;
+                    }
                 }
             }
             
@@ -2300,16 +2298,30 @@ class TornadoApp {
                         }
                     }
                 } else {
-                    console.log(`Could not extract chat ID from URL: ${url}`);
-                    setTimeout(async () => {
-                        this.notificationManager.showNotification(
-                            "Task Completed!", 
-                            `You have received ${task.reward.toFixed(5)} TON`, 
-                            "success"
-                        );
+                    this.notificationManager.showNotification(
+                        "Verification Failed", 
+                        "Unable to verify task. Please try again.", 
+                        "error"
+                    );
+                    
+                    this.enableAllTaskButtons();
+                    this.isProcessingTask = false;
+                    
+                    if (button) {
+                        button.innerHTML = 'Try Again';
+                        button.disabled = false;
+                        button.classList.remove('check');
+                        button.classList.add('start');
                         
-                        await this.completeTask(taskId, taskType, task.reward, button);
-                    }, 500);
+                        const newButton = button.cloneNode(true);
+                        button.parentNode.replaceChild(newButton, button);
+                        
+                        newButton.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            await this.handleTask(taskId, url, taskType, task.reward, newButton);
+                        });
+                    }
                 }
             } else {
                 console.log(`Task type is not channel/group, completing directly`);
@@ -2322,18 +2334,39 @@ class TornadoApp {
             this.isProcessingTask = false;
             
             this.notificationManager.showNotification("Error", "Failed to verify task", "error");
+            
+            if (button) {
+                button.innerHTML = 'Try Again';
+                button.disabled = false;
+                button.classList.remove('check');
+                button.classList.add('start');
+                
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                newButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await this.handleTask(taskId, url, taskType, reward, newButton);
+                });
+            }
         }
     }
 
     async completeTask(taskId, taskType, reward, button) {
         try {
-            if (!this.db) return false;
+            if (!this.db) {
+                throw new Error("Database not initialized");
+            }
             
             let task = null;
-            for (const t of [...this.mainTasks, ...this.socialTasks]) {
-                if (t.id === taskId) {
-                    task = t;
-                    break;
+            if (this.taskManager) {
+                const allTasks = [...(this.taskManager.mainTasks || []), ...(this.taskManager.socialTasks || [])];
+                for (const t of allTasks) {
+                    if (t.id === taskId) {
+                        task = t;
+                        break;
+                    }
                 }
             }
             
@@ -2398,7 +2431,6 @@ class TornadoApp {
             }
             
             this.updateHeader();
-            this.renderProfilePage();
             
             await this.updateAppStats('totalTasks', 1);
             
@@ -2426,6 +2458,13 @@ class TornadoApp {
             this.isProcessingTask = false;
             
             this.notificationManager.showNotification("Error", "Failed to complete task", "error");
+            
+            if (button) {
+                button.innerHTML = 'Try Again';
+                button.disabled = false;
+                button.classList.remove('check');
+                button.classList.add('start');
+            }
             
             throw error;
         }
@@ -2750,6 +2789,7 @@ class TornadoApp {
         const adsProgress = Math.min(totalWatchAds, requiredAds);
         const canWithdraw = totalWatchAds >= requiredAds;
         const adsNeeded = requiredAds - totalWatchAds;
+        const maxBalance = this.safeNumber(this.userState.balance);
         
         profilePage.innerHTML = `
             <div class="profile-container">
@@ -2791,7 +2831,6 @@ class TornadoApp {
                 <div class="withdraw-card">
                     <div class="withdraw-info">
                         <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
-                        <p class="current-balance">Available: ${this.safeNumber(this.userState.balance).toFixed(5)} TON</p>
                     </div>
                     
                     <div class="ads-requirement">
@@ -2815,15 +2854,18 @@ class TornadoApp {
                                required>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group amount-group">
                         <label class="form-label" for="profile-amount-input">
                             <i class="fas fa-gem"></i> Withdrawal Amount
                         </label>
-                        <input type="number" id="profile-amount-input" class="form-input" 
-                               step="0.00001" min="${this.appConfig.MINIMUM_WITHDRAW}" 
-                               max="${this.safeNumber(this.userState.balance)}"
-                               placeholder="Minimum: ${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON"
-                               required>
+                        <div class="amount-input-container">
+                            <input type="number" id="profile-amount-input" class="form-input" 
+                                   step="0.00001" min="${this.appConfig.MINIMUM_WITHDRAW}" 
+                                   max="${maxBalance}"
+                                   placeholder="Minimum: ${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON"
+                                   required>
+                            <button type="button" class="max-btn" id="max-btn">MAX</button>
+                        </div>
                     </div>
                     
                     <div class="withdraw-minimum-info">
@@ -2832,7 +2874,7 @@ class TornadoApp {
                     </div>
                     
                     <button id="profile-withdraw-btn" class="withdraw-btn" 
-                            ${!canWithdraw || this.safeNumber(this.userState.balance) < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
+                            ${!canWithdraw || maxBalance < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
                         <i class="fas fa-paper-plane"></i> ${canWithdraw ? 'WITHDRAW NOW' : `MUST WATCH ${adsProgress}/${requiredAds}`}
                     </button>
                 </div>
@@ -2846,6 +2888,14 @@ class TornadoApp {
         const withdrawBtn = document.getElementById('profile-withdraw-btn');
         const walletInput = document.getElementById('profile-wallet-input');
         const amountInput = document.getElementById('profile-amount-input');
+        const maxBtn = document.getElementById('max-btn');
+        
+        if (maxBtn) {
+            maxBtn.addEventListener('click', () => {
+                const max = this.safeNumber(this.userState.balance);
+                amountInput.value = max.toFixed(5);
+            });
+        }
         
         if (withdrawBtn) {
             withdrawBtn.addEventListener('click', async () => {
