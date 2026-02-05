@@ -106,52 +106,31 @@ class TaskManager {
         return this.socialTasks;
     }
 
-    async verifyTaskCompletion(taskId, chatId, userId, initData) {
+    async verifyTaskCompletion(taskId, chatId, userId) {
         try {
-            if (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                
-                if (tg.initData) {
-                    try {
-                        return { success: true, message: "Task will be verified" };
-                    } catch (e) {
-                        return { success: true, message: "Auto verification" };
-                    }
-                }
-            }
+            const botToken = this.app.appConfig.BOT_TOKEN;
             
-            try {
-                const response = await fetch('/api/telegram-bot', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-user-id': userId.toString(),
-                        'x-telegram-hash': initData || 'test-hash'
-                    },
-                    body: JSON.stringify({
-                        action: 'getChatMember',
-                        params: {
-                            chat_id: chatId,
-                            user_id: parseInt(userId)
-                        }
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.ok === true && data.result) {
-                        const status = data.result.status;
-                        const validStatuses = ['member', 'administrator', 'creator', 'restricted'];
-                        const isMember = validStatuses.includes(status);
-                        
-                        return { 
-                            success: isMember, 
-                            message: isMember ? "Verified successfully" : "Please join first"
-                        };
-                    }
+            const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    user_id: parseInt(userId)
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.ok === true && data.result) {
+                    const status = data.result.status;
+                    const validStatuses = ['member', 'administrator', 'creator', 'restricted'];
+                    const isMember = validStatuses.includes(status);
+                    
+                    return { 
+                        success: isMember, 
+                        message: isMember ? "Verified successfully" : "Please join first"
+                    };
                 }
-            } catch (apiError) {
-                console.warn('API verification failed:', apiError);
             }
             
             return { success: true, message: "Verified after timeout" };
@@ -159,42 +138,6 @@ class TaskManager {
         } catch (error) {
             console.error('Task verification error:', error);
             return { success: true, message: "Auto-verified due to error" };
-        }
-    }
-
-    async checkBotAdminStatus(chatId, userId, initData) {
-        try {
-            const response = await fetch('/api/telegram-bot', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-user-id': userId.toString(),
-                    'x-telegram-hash': initData || ''
-                },
-                body: JSON.stringify({
-                    action: 'getChatAdministrators',
-                    params: { chat_id: chatId }
-                })
-            });
-            
-            if (!response.ok) {
-                return false;
-            }
-            
-            const data = await response.json();
-            if (data.ok && data.result) {
-                const admins = data.result;
-                const isBotAdmin = admins.some(admin => {
-                    const isBot = admin.user?.is_bot;
-                    const isThisBot = admin.user?.username === this.app.appConfig.BOT_USERNAME;
-                    return isBot && isThisBot;
-                });
-                return isBotAdmin;
-            }
-            return false;
-        } catch (error) {
-            console.error('Error checking bot admin status:', error);
-            return false;
         }
     }
 
