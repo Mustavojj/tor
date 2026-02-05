@@ -20,7 +20,7 @@ export const APP_CONFIG = {
             channel: "@TORNADO_CHNL"
         },
         {
-            name: "Join Community Chat",
+            name: "Join Official Chat",
             url: "https://t.me/NEJARS",
             channel: "@NEJARS"
         },
