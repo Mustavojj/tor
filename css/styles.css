@@ -1027,6 +1027,16 @@ body {
     margin-bottom: 15px;
 }
 
+.form-group.amount-group {
+    position: relative;
+}
+
+.amount-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .form-label {
     display: flex;
     align-items: center;
@@ -1055,11 +1065,36 @@ body {
     outline: none;
     box-sizing: border-box;
     transition: all 0.2s ease;
+    padding-right: 70px;
 }
 
 .form-input:focus {
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+}
+
+.max-btn {
+    position: absolute;
+    right: 8px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    border: none;
+    border-radius: var(--border-radius-xs);
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    z-index: 2;
+}
+
+.max-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-light);
+}
+
+.max-btn:active {
+    transform: scale(0.98);
 }
 
 .withdraw-minimum-info {
@@ -1730,6 +1765,15 @@ body.light-mode .welcome-tasks-modal {
         width: 24px;
         height: 24px;
     }
+    
+    .max-btn {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .form-input {
+        padding-right: 65px;
+    }
 }
 
 @media (max-width: 360px) {
@@ -1771,6 +1815,15 @@ body.light-mode .welcome-tasks-modal {
     .square-card {
         min-height: 120px;
         padding: 12px;
+    }
+    
+    .max-btn {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+    
+    .form-input {
+        padding-right: 60px;
     }
 }
 
