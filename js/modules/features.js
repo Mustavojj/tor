@@ -106,38 +106,79 @@ class TaskManager {
         return this.socialTasks;
     }
 
-    async verifyTaskCompletion(taskId, chatId, userId) {
+    async verifyTaskCompletion(taskId, chatId, userId, initData) {
         try {
-            const botToken = this.app.appConfig.BOT_TOKEN;
-            
-            const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    user_id: parseInt(userId)
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.ok === true && data.result) {
-                    const status = data.result.status;
-                    const validStatuses = ['member', 'administrator', 'creator', 'restricted'];
-                    const isMember = validStatuses.includes(status);
+            // استخدام التوكن مباشرة من التطبيق
+            if (this.app.botToken) {
+                try {
+                    const response = await fetch(`https://api.telegram.org/bot${this.app.botToken}/getChatMember`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            chat_id: chatId,
+                            user_id: parseInt(userId)
+                        })
+                    });
                     
-                    return { 
-                        success: isMember, 
-                        message: isMember ? "Verified successfully" : "Please join first"
-                    };
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.ok === true && data.result) {
+                            const status = data.result.status;
+                            const validStatuses = ['member', 'administrator', 'creator', 'restricted'];
+                            const isMember = validStatuses.includes(status);
+                            
+                            return { 
+                                success: isMember, 
+                                message: isMember ? "Verified successfully" : "Please join first"
+                            };
+                        }
+                    }
+                } catch (apiError) {
+                    console.warn('Direct Telegram API verification failed:', apiError);
                 }
             }
             
-            return { success: true, message: "Verified after timeout" };
+            return { success: true, message: "Auto-verified" };
             
         } catch (error) {
             console.error('Task verification error:', error);
             return { success: true, message: "Auto-verified due to error" };
+        }
+    }
+
+    async checkBotAdminStatus(chatId, userId, initData) {
+        try {
+            if (this.app.botToken) {
+                const response = await fetch(`https://api.telegram.org/bot${this.app.botToken}/getChatAdministrators`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ chat_id: chatId })
+                });
+                
+                if (!response.ok) {
+                    return false;
+                }
+                
+                const data = await response.json();
+                if (data.ok && data.result) {
+                    const admins = data.result;
+                    const isBotAdmin = admins.some(admin => {
+                        const isBot = admin.user?.is_bot;
+                        const isThisBot = admin.user?.username === this.app.appConfig.BOT_USERNAME;
+                        return isBot && isThisBot;
+                    });
+                    return isBotAdmin;
+                }
+                return false;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking bot admin status:', error);
+            return false;
         }
     }
 
