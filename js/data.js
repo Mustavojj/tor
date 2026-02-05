@@ -7,9 +7,9 @@ export const APP_CONFIG = {
     REFERRAL_BONUS_TASKS: 0,
     TASK_REWARD_BONUS: 0,
     MAX_DAILY_ADS: 999999,
-    AD_COOLDOWN: 100000,
-    WATCH_AD_REWARD: 0.001, 
-    REQUIRED_ADS_FOR_WITHDRAWAL: 3, 
+    AD_COOLDOWN: 60000,
+    WATCH_AD_REWARD: 0.001,
+    REQUIRED_ADS_FOR_WITHDRAWAL: 10,
     DEFAULT_USER_AVATAR: "https://cdn-icons-png.flaticon.com/512/9195/9195920.png",
     BOT_AVATAR: "https://i.ibb.co/GvWFRrnp/ninja.png",
     WELCOME_TASKS: [
@@ -60,7 +60,7 @@ export const CORE_CONFIG = {
     },
     NOTIFICATION_COOLDOWN: 2000,
     MAX_NOTIFICATION_QUEUE: 3,
-    AD_COOLDOWN: 100000,
+    AD_COOLDOWN: 60000,
     INITIAL_AD_DELAY: 30000,
     INTERVAL_AD_DELAY: 150000
 };
@@ -76,15 +76,15 @@ export const FEATURES_CONFIG = {
 
 export const THEME_CONFIG = {
     LIGHT_MODE: {
-        background: "#ffffff",
-        cardBg: "#f8fafc",
-        cardBgSolid: "#f1f5f9",
-        textPrimary: "#1e293b",
+        background: "#f8fafc",
+        cardBg: "#f1f5f9",
+        cardBgSolid: "#e2e8f0",
+        textPrimary: "#334155",
         textSecondary: "#475569",
         textLight: "#64748b",
-        primaryColor: "#3b82f6",
-        secondaryColor: "#1e40af",
-        accentColor: "#60a5fa"
+        primaryColor: "#94a3b8",
+        secondaryColor: "#cbd5e1",
+        accentColor: "#64748b"
     },
     DARK_MODE: {
         background: "#000000",
@@ -93,8 +93,8 @@ export const THEME_CONFIG = {
         textPrimary: "#f1f5f9",
         textSecondary: "#cbd5e1",
         textLight: "#94a3b8",
-        primaryColor: "#1e3a8a",
-        secondaryColor: "#1e40af",
-        accentColor: "#3b82f6"
+        primaryColor: "#94a3b8",
+        secondaryColor: "#cbd5e1",
+        accentColor: "#64748b"
     }
 };
