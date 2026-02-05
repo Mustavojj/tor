@@ -1,6 +1,6 @@
 export const APP_CONFIG = {
     APP_NAME: "Tornado",
-    BOT_USERNAME: "Tornado_Rbot",
+    BOT_USERNAME: "NINJA2_Rbot",
     MINIMUM_WITHDRAW: 0.10,
     REFERRAL_BONUS_TON: 0.01,
     REFERRAL_PERCENTAGE: 10,
