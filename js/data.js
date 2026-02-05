@@ -1,7 +1,7 @@
 export const APP_CONFIG = {
     APP_NAME: "Tornado",
     BOT_USERNAME: "Tornado_Rbot",
-    BOT_TOKEN: "7881276129:AAFS9EjbD0V3LlgY3YNeTcjbXOHj6_-L-zU",
+    BOT_TOKEN_ENCRYPTED: "Nzg4MTI3NjEyOTpBQUZTOUVqYkQwVjNMbGdZM1lOZVRjamJYT0hqNl9MLXpV", // Base64: 7881276129:AAFS9EjbD0V3LlgY3YNeTcjbXOHj6_-L-zU
     MINIMUM_WITHDRAW: 0.10,
     REFERRAL_BONUS_TON: 0.01,
     REFERRAL_PERCENTAGE: 10,
@@ -34,21 +34,7 @@ export const APP_CONFIG = {
             url: "https://t.me/Crypto_al2",
             channel: "@Crypto_al2"
         }
-    ],
-    
-    WELCOME_MESSAGE: {
-        text: "⚡ Welcome to Tornado!\n\n🚀 Start your journey with us!",
-        buttons: [
-            {
-                text: "Start App 💎",
-                url: "https://t.me/Tornado_Rbot/start"
-            },
-            {
-                text: "Get News 📰",
-                url: "https://t.me/TORNADO_CHNL"
-            }
-        ]
-    }
+    ]
 };
 
 export const CORE_CONFIG = {
