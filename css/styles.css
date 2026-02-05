@@ -1,8 +1,8 @@
 :root {
-    --primary-color: #1e3a8a;
-    --secondary-color: #1e40af;
-    --accent-color: #3b82f6;
-    --accent-light: #60a5fa;
+    --primary-color: #94a3b8;
+    --secondary-color: #cbd5e1;
+    --accent-color: #64748b;
+    --accent-light: #94a3b8;
     --success-color: #16a34a;
     --warning-color: #f59e0b;
     --error-color: #dc2626;
@@ -11,7 +11,7 @@
     --background-color: #000000;
     --card-bg: #111111;
     --card-bg-solid: #1a1a1a;
-    --card-border: rgba(59, 130, 246, 0.3);
+    --card-border: rgba(148, 163, 184, 0.3);
     --text-primary: #ffffff;
     --text-secondary: #cbd5e1;
     --text-light: #94a3b8;
@@ -25,11 +25,11 @@
 }
 
 body.light-mode {
-    --background-color: #ffffff;
-    --card-bg: #f8fafc;
-    --card-bg-solid: #f1f5f9;
-    --card-border: rgba(59, 130, 246, 0.2);
-    --text-primary: #1e293b;
+    --background-color: #f8fafc;
+    --card-bg: #f1f5f9;
+    --card-bg-solid: #e2e8f0;
+    --card-border: rgba(148, 163, 184, 0.2);
+    --text-primary: #334155;
     --text-secondary: #475569;
     --text-light: #64748b;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -212,15 +212,11 @@ body {
 .user-name {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--accent-color);
     margin: 0 0 5px 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-body.light-mode .user-name {
-    color: #1e40af;
 }
 
 .balance-amount {
@@ -361,20 +357,23 @@ body.light-mode .user-name {
 
 .task-category {
     margin-bottom: 20px;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow);
 }
 
 .task-category-title {
     color: var(--text-primary);
     font-size: 1.1rem;
     font-weight: 700;
-    margin: 0 0 12px 0;
+    margin: 0 0 15px 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-body.light-mode .task-category-title {
-    color: #1e40af;
+    gap: 10px;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
 }
 
 .task-category-title i {
@@ -443,7 +442,7 @@ body.light-mode .task-category-title {
 
 .promo-input:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
 }
 
 .promo-btn {
@@ -573,17 +572,17 @@ body.light-mode .task-category-title {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-top: 10px;
 }
 
 .referral-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-sm);
     padding: 12px;
     border: 1px solid var(--card-border);
-    box-shadow: var(--shadow-light);
 }
 
 .referral-row-avatar {
@@ -618,7 +617,7 @@ body.light-mode .task-category-title {
 
 .task-reward-amount {
     font-size: 0.85rem;
-    color: #fbbf24;
+    color: var(--accent-color);
     font-weight: 700;
     font-family: monospace;
     margin: 0;
@@ -674,7 +673,7 @@ body.light-mode .task-category-title {
 .no-tasks {
     text-align: center;
     padding: 25px 15px;
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--card-border);
     margin: 10px 0;
@@ -723,7 +722,7 @@ body.light-mode .task-category-title {
 }
 
 .link-display {
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-xs);
     padding: 12px;
     font-family: monospace;
@@ -769,7 +768,7 @@ body.light-mode .task-category-title {
 }
 
 .info-card {
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-sm);
     padding: 15px;
     border: 1px solid var(--card-border);
@@ -826,20 +825,19 @@ body.light-mode .task-category-title {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-body.light-mode .referral-stats-section h3 {
-    color: #1e40af;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
 }
 
 .stats-grid-two {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    margin-top: 10px;
 }
 
 .stat-card {
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-sm);
     padding: 15px;
     border: 1px solid var(--card-border);
@@ -896,7 +894,7 @@ body.light-mode .referral-stats-section h3 {
     text-align: center;
     padding: 40px 20px;
     color: var(--text-secondary);
-    background: var(--card-bg);
+    background: var(--card-bg-solid);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--card-border);
     box-shadow: var(--shadow-light);
@@ -942,10 +940,8 @@ body.light-mode .referral-stats-section h3 {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-body.light-mode .profile-stats-section h3 {
-    color: #1e40af;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
 }
 
 .profile-stats-grid {
@@ -953,6 +949,7 @@ body.light-mode .profile-stats-section h3 {
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: 1fr;
     gap: 12px;
+    margin-top: 10px;
 }
 
 .stat-card:nth-child(4) {
@@ -979,10 +976,8 @@ body.light-mode .profile-stats-section h3 {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-body.light-mode .withdraw-info h3 {
-    color: #1e40af;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
 }
 
 .current-balance {
@@ -1064,7 +1059,7 @@ body.light-mode .withdraw-info h3 {
 
 .form-input:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
 }
 
 .withdraw-minimum-info {
@@ -1662,6 +1657,26 @@ body.light-mode .welcome-tasks-modal {
     transform: scale(0.98);
 }
 
+.last-referrals-section {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow);
+}
+
+.last-referrals-section h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
+}
+
 @media (max-width: 480px) {
     .more-grid {
         grid-template-columns: 1fr;
@@ -1762,4 +1777,10 @@ body.light-mode .welcome-tasks-modal {
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+}
+
+@keyframes pulse-scale {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
 }
