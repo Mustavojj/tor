@@ -29,9 +29,9 @@ class TornadoApp {
         };
         
         this.pages = [
-            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#3b82f6' },
-            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#3b82f6' },
-            { id: 'profile-page', name: 'Profile', icon: 'user-photo', color: '#3b82f6' }
+            { id: 'tasks-page', name: 'Earn', icon: 'fa-coins', color: '#94a3b8' },
+            { id: 'referrals-page', name: 'Invite', icon: 'fa-user-plus', color: '#94a3b8' },
+            { id: 'profile-page', name: 'Profile', icon: 'user-photo', color: '#94a3b8' }
         ];
         
         this.cache = new CacheManager();
@@ -936,114 +936,6 @@ class TornadoApp {
         return null;
     }
 
-    async checkBotAdminStatus(chatId) {
-        try {
-            if (!this.tgUser?.id) return false;
-            
-            const response = await fetch('/api/telegram-bot', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-user-id': this.tgUser.id.toString(),
-                    'x-telegram-hash': this.tg?.initData || ''
-                },
-                body: JSON.stringify({
-                    action: 'getChatAdministrators',
-                    params: { chat_id: chatId }
-                })
-            });
-            
-            if (!response.ok) {
-                console.error('Bot admin check failed');
-                return false;
-            }
-            
-            const data = await response.json();
-            if (data.ok && data.result) {
-                const admins = data.result;
-                const isBotAdmin = admins.some(admin => {
-                    const isBot = admin.user?.is_bot;
-                    const isThisBot = admin.user?.username === this.appConfig.BOT_USERNAME;
-                    return isBot && isThisBot;
-                });
-                return isBotAdmin;
-            }
-            return false;
-        } catch (error) {
-            console.error('Error checking bot admin status:', error);
-            return false;
-        }
-    }
-    
-    async checkUserMembershipWithBot(chatId) {
-        try {
-            const userId = this.tgUser?.id;
-            if (!userId) return false;
-            
-            const response = await fetch('/api/telegram-bot', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-user-id': userId.toString(),
-                    'x-telegram-hash': this.tg?.initData || ''
-                },
-                body: JSON.stringify({
-                    action: 'getChatMember',
-                    params: {
-                        chat_id: chatId,
-                        user_id: userId
-                    }
-                })
-            });
-            
-            if (!response.ok) {
-                console.error('Telegram API request failed');
-                return false;
-            }
-            
-            const data = await response.json();
-            if (!data.ok || !data.result) {
-                console.error('Telegram API response not ok:', data);
-                return false;
-            }
-            
-            const userStatus = data.result.status;
-            const isMember = ['member', 'administrator', 'creator', 'restricted'].includes(userStatus);
-            
-            console.log(`User ${userId} membership status in ${chatId}: ${userStatus} -> ${isMember}`);
-            return isMember;
-        } catch (error) {
-            console.error('Error checking user membership with bot:', error);
-            return false;
-        }
-    }
-
-    extractChatIdFromUrl(url) {
-        try {
-            if (!url) return null;
-            
-            url = url.toString().trim();
-            
-            if (url.includes('t.me/')) {
-                const match = url.match(/t\.me\/([^\/\?]+)/);
-                if (match && match[1]) {
-                    const username = match[1];
-                    
-                    if (username.startsWith('@')) return username;
-                    
-                    if (/^[a-zA-Z][a-zA-Z0-9_]{4,}$/.test(username)) return '@' + username;
-                    
-                    return username;
-                }
-            }
-            
-            return null;
-            
-        } catch (error) {
-            return null;
-        }
-    }
-
     async processReferralRegistrationWithBonus(referrerId, newUserId) {
         try {
             if (!this.db) return;
@@ -1641,7 +1533,6 @@ class TornadoApp {
     setupTelegramTheme() {
         if (!this.tg) return;
         
-        // جلب الوضع المحفوظ من قاعدة البيانات أو localStorage
         if (this.db && this.tgUser) {
             this.db.ref(`users/${this.tgUser.id}/theme`).once('value').then(snapshot => {
                 if (snapshot.exists()) {
@@ -1707,10 +1598,8 @@ class TornadoApp {
         this.darkMode = !this.darkMode;
         this.applyTheme();
         
-        // حفظ في localStorage
         localStorage.setItem('tornado_theme', this.darkMode ? 'dark' : 'light');
         
-        // حفظ في قاعدة البيانات إذا كان متاحًا
         if (this.db && this.tgUser) {
             this.db.ref(`users/${this.tgUser.id}`).update({
                 theme: this.darkMode ? 'dark' : 'light',
@@ -1789,7 +1678,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = `2px solid ${this.darkMode ? '#3b82f6' : '#1e40af'}`;
+            userPhoto.style.border = `2px solid ${this.darkMode ? '#94a3b8' : '#64748b'}`;
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1800,7 +1689,7 @@ class TornadoApp {
             userName.textContent = this.truncateName(fullName, 20);
             userName.style.fontSize = '1.2rem';
             userName.style.fontWeight = '800';
-            userName.style.color = this.darkMode ? 'white' : '#1e40af';
+            userName.style.color = this.darkMode ? '#94a3b8' : '#64748b';
             userName.style.margin = '0 0 5px 0';
             userName.style.whiteSpace = 'nowrap';
             userName.style.overflow = 'hidden';
@@ -1813,7 +1702,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = this.darkMode ? '#60a5fa' : '#1e40af';
+            tonBalance.style.color = this.darkMode ? '#94a3b8' : '#64748b';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
@@ -2382,57 +2271,44 @@ class TornadoApp {
                 throw new Error("Task not found");
             }
             
-            const chatId = this.extractChatIdFromUrl(url);
+            const chatId = this.taskManager.extractChatIdFromUrl(url);
             
             if (task.type === 'channel' || task.type === 'group') {
                 if (chatId) {
-                    const isBotAdmin = await this.checkBotAdminStatus(chatId);
+                    const verificationResult = await this.taskManager.verifyTaskCompletion(
+                        taskId, 
+                        chatId, 
+                        this.tgUser.id, 
+                        this.tg?.initData || ''
+                    );
                     
-                    if (isBotAdmin) {
-                        console.log(`Bot is admin in ${chatId}, checking user membership...`);
-                        const isSubscribed = await this.checkUserMembershipWithBot(chatId);
-                        
-                        if (isSubscribed) {
-                            console.log(`User is subscribed to ${chatId}, completing task...`);
-                            await this.completeTask(taskId, taskType, task.reward, button);
-                        } else {
-                            console.log(`User is NOT subscribed to ${chatId}`);
-                            this.notificationManager.showNotification(
-                                "Join Required", 
-                                "You need to join the channel/group first!", 
-                                "error"
-                            );
-                            
-                            this.enableAllTaskButtons();
-                            this.isProcessingTask = false;
-                            
-                            if (button) {
-                                button.innerHTML = 'Try Again';
-                                button.disabled = false;
-                                button.classList.remove('check');
-                                button.classList.add('start');
-                                
-                                const newButton = button.cloneNode(true);
-                                button.parentNode.replaceChild(newButton, button);
-                                
-                                newButton.addEventListener('click', async (e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    await this.handleTask(taskId, url, taskType, task.reward, newButton);
-                                });
-                            }
-                        }
+                    if (verificationResult.success) {
+                        await this.completeTask(taskId, taskType, task.reward, button);
                     } else {
-                        console.log(`Bot is NOT admin in ${chatId}, skipping verification`);
-                        setTimeout(async () => {
-                            this.notificationManager.showNotification(
-                                "Task Completed!", 
-                                `You have received ${task.reward.toFixed(5)} TON`, 
-                                "success"
-                            );
+                        this.notificationManager.showNotification(
+                            "Verification Failed", 
+                            verificationResult.message || "Please join the channel/group first!", 
+                            "error"
+                        );
+                        
+                        this.enableAllTaskButtons();
+                        this.isProcessingTask = false;
+                        
+                        if (button) {
+                            button.innerHTML = 'Try Again';
+                            button.disabled = false;
+                            button.classList.remove('check');
+                            button.classList.add('start');
                             
-                            await this.completeTask(taskId, taskType, task.reward, button);
-                        }, 500);
+                            const newButton = button.cloneNode(true);
+                            button.parentNode.replaceChild(newButton, button);
+                            
+                            newButton.addEventListener('click', async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                await this.handleTask(taskId, url, taskType, task.reward, newButton);
+                            });
+                        }
                     }
                 } else {
                     console.log(`Could not extract chat ID from URL: ${url}`);
@@ -2456,23 +2332,7 @@ class TornadoApp {
             this.enableAllTaskButtons();
             this.isProcessingTask = false;
             
-            if (button) {
-                button.innerHTML = 'Try Again';
-                button.disabled = false;
-                button.classList.remove('check');
-                button.classList.add('start');
-                
-                const newButton = button.cloneNode(true);
-                button.parentNode.replaceChild(newButton, button);
-                
-                newButton.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    await this.handleTask(taskId, url, taskType, reward, newButton);
-                });
-            }
-            
-            this.notificationManager.showNotification("Error", "Failed to verify task completion", "error");
+            this.notificationManager.showNotification("Error", "Failed to verify task", "error");
         }
     }
 
@@ -2576,21 +2436,7 @@ class TornadoApp {
             this.enableAllTaskButtons();
             this.isProcessingTask = false;
             
-            if (button) {
-                button.innerHTML = 'Try Again';
-                button.disabled = false;
-                button.classList.remove('check', 'completed');
-                button.classList.add('start');
-                
-                const newButton = button.cloneNode(true);
-                button.parentNode.replaceChild(newButton, button);
-                
-                newButton.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    await this.handleTask(taskId, url, taskType, reward, newButton);
-                });
-            }
+            this.notificationManager.showNotification("Error", "Failed to complete task", "error");
             
             throw error;
         }
@@ -2784,7 +2630,7 @@ class TornadoApp {
         const referrals = this.safeNumber(this.userState.referrals || 0);
         const referralEarnings = this.safeNumber(this.userState.referralEarnings || 0);
         
-        const recentReferrals = await this.loadRecentReferralsForDisplay();
+        const recentReferrals = await this.referralManager.loadRecentReferrals();
         
         referralsPage.innerHTML = `
             <div class="referrals-container">
@@ -2876,32 +2722,6 @@ class TornadoApp {
         `;
     }
 
-    async loadRecentReferralsForDisplay() {
-        try {
-            if (!this.db) return [];
-            
-            const referralsRef = await this.db.ref(`referrals/${this.tgUser.id}`).once('value');
-            if (!referralsRef.exists()) return [];
-            
-            const referralsList = [];
-            referralsRef.forEach(child => {
-                const referralData = child.val();
-                if (referralData && typeof referralData === 'object') {
-                    referralsList.push({
-                        id: child.key,
-                        ...referralData
-                    });
-                }
-            });
-            
-            return referralsList.sort((a, b) => b.joinedAt - a.joinedAt).slice(0, 10);
-            
-        } catch (error) {
-            console.warn('Load recent referrals error:', error);
-            return [];
-        }
-    }
-
     setupReferralsPageEvents() {
         const copyBtn = document.getElementById('copy-referral-link-btn');
         if (copyBtn) {
@@ -2923,30 +2743,7 @@ class TornadoApp {
 
     async refreshReferralsList() {
         try {
-            if (!this.db || !this.tgUser) return;
-            
-            const referralsRef = await this.db.ref(`referrals/${this.tgUser.id}`).once('value');
-            if (!referralsRef.exists()) return;
-            
-            const referrals = referralsRef.val();
-            const verifiedReferrals = [];
-            
-            for (const referralId in referrals) {
-                const referral = referrals[referralId];
-                if (referral.state === 'verified' && referral.bonusGiven) {
-                    verifiedReferrals.push({
-                        id: referralId,
-                        ...referral
-                    });
-                }
-            }
-            
-            this.userState.referrals = verifiedReferrals.length;
-            
-            if (document.getElementById('referrals-page')?.classList.contains('active')) {
-                this.renderReferralsPage();
-            }
-            
+            await this.referralManager.refreshReferralsList();
         } catch (error) {
             console.warn('Refresh referrals list error:', error);
         }
