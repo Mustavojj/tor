@@ -1838,6 +1838,13 @@ html {
     100% { transform: scale(1); opacity: 0.8; }
 }
 
+
 .ad-card:nth-child(3) {
-    margin-bottom: 10vh !important;
+    position: relative;
+}
+.ad-card:nth-child(3)::after {
+    content: '';
+    display: block;
+    height: 10vh;
+    width: 100%;
 } 
