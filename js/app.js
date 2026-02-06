@@ -973,6 +973,9 @@ class TornadoApp {
                 this.updateHeader();
             }
             
+            this.cache.delete(`user_${referrerId}`);
+            this.cache.delete(`referrals_${referrerId}`);
+            
             await this.refreshReferralsList();
             
         } catch (error) {
@@ -1408,10 +1411,22 @@ class TornadoApp {
                 this.pendingReferralAfterWelcome = null;
             }
             
+            await this.loadUserData(true);
+            
             this.cache.delete(`user_${this.tgUser.id}`);
             this.updateHeader();
             
-            await this.refreshReferralsList();
+            if (this.referralManager) {
+                await this.referralManager.refreshReferralsList();
+            }
+            
+            if (this.userState.referredBy) {
+                this.notificationManager.showNotification(
+                    "Referral Bonus", 
+                    "Your referrer received 0.01 TON bonus!", 
+                    "success"
+                );
+            }
             
             return true;
         } catch (error) {
@@ -1662,7 +1677,7 @@ class TornadoApp {
             userPhoto.style.height = '60px';
             userPhoto.style.borderRadius = '50%';
             userPhoto.style.objectFit = 'cover';
-            userPhoto.style.border = `2px solid ${this.darkMode ? '#94a3b8' : '#64748b'}`;
+            userPhoto.style.border = `2px solid ${this.darkMode ? '#60a5fa' : '#64748b'}`;
             userPhoto.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
             userPhoto.oncontextmenu = (e) => e.preventDefault();
             userPhoto.ondragstart = () => false;
@@ -1673,7 +1688,7 @@ class TornadoApp {
             userName.textContent = this.truncateName(fullName, 20);
             userName.style.fontSize = '1.2rem';
             userName.style.fontWeight = '800';
-            userName.style.color = this.darkMode ? '#94a3b8' : '#64748b';
+            userName.style.color = this.darkMode ? '#60a5fa' : '#64748b';
             userName.style.margin = '0 0 5px 0';
             userName.style.whiteSpace = 'nowrap';
             userName.style.overflow = 'hidden';
@@ -1686,7 +1701,7 @@ class TornadoApp {
             tonBalance.innerHTML = `<b>${balance.toFixed(5)} TON</b>`;
             tonBalance.style.fontSize = '1.1rem';
             tonBalance.style.fontWeight = '700';
-            tonBalance.style.color = this.darkMode ? '#94a3b8' : '#64748b';
+            tonBalance.style.color = this.darkMode ? '#60a5fa' : '#64748b';
             tonBalance.style.fontFamily = 'monospace';
             tonBalance.style.margin = '0';
             tonBalance.style.whiteSpace = 'nowrap';
