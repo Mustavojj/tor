@@ -1838,13 +1838,15 @@ html {
     100% { transform: scale(1); opacity: 0.8; }
 }
 
-/* إضافة مسافة أسفل بطاقة الإعلان الثانية مباشرة */
-.ad-card:last-child {
-    margin-bottom: 10vh !important;
+
+/* مسافة تحت قسم المهام الإضافية */
+#more-tab {
+    margin-bottom: 10vh;
+    display: block;
+    position: relative;
 }
 
-/* أو إذا كانت البطاقات في grid */
-#more-tab .more-grid {
-    padding-bottom: 10vh;
+/* أو مسافة تحت البطاقات */
+.more-grid {
     margin-bottom: 10vh;
 }
