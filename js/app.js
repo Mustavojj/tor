@@ -1391,9 +1391,6 @@ class TornadoApp {
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update(updates);
                 
-                if (this.userState.referredBy) {
-                    await this.processReferralRegistrationWithBonus(this.userState.referredBy, this.tgUser.id);
-                }
             }
             
             this.userState.balance = newBalance;
