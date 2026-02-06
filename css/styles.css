@@ -1838,15 +1838,6 @@ html {
     100% { transform: scale(1); opacity: 0.8; }
 }
 
-
-/* مسافة تحت قسم المهام الإضافية */
-#more-tab {
-    margin-bottom: 10vh;
-    display: block;
-    position: relative;
-}
-
-/* أو مسافة تحت البطاقات */
-.more-grid {
-    margin-bottom: 10vh;
-}
+.ad-card:nth-child(3) {
+    margin-bottom: 10vh !important;
+} 
