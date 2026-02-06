@@ -64,14 +64,14 @@ export const THEME_CONFIG = {
         accentColor: "#64748b"
     },
     DARK_MODE: {
-        background: "#000000",
-        cardBg: "rgba(17, 17, 17, 0.7)",
-        cardBgSolid: "#111111",
+        background: "#0f172a",
+        cardBg: "rgba(30, 41, 59, 0.8)",
+        cardBgSolid: "#1e293b",
         textPrimary: "#f1f5f9",
         textSecondary: "#cbd5e1",
         textLight: "#94a3b8",
-        primaryColor: "#94a3b8",
-        secondaryColor: "#cbd5e1",
-        accentColor: "#64748b"
+        primaryColor: "#60a5fa",
+        secondaryColor: "#93c5fd",
+        accentColor: "#3b82f6"
     }
 };
