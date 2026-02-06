@@ -1839,12 +1839,17 @@ html {
 }
 
 
-.ad-card:nth-child(3) {
+#more-tab {
     position: relative;
+    min-height: 80vh;
 }
-.ad-card:nth-child(3)::after {
+#more-tab::after {
     content: '';
     display: block;
     height: 10vh;
     width: 100%;
-} 
+    background: #000000;
+    position: absolute;
+    bottom: -10vh;
+    left: 0;
+    }
