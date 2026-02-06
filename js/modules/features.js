@@ -299,9 +299,13 @@ class ReferralManager {
             
             this.app.userState.referrals = verifiedReferrals.length;
             
+            await this.app.loadUserData(true);
+            
             if (document.getElementById('referrals-page')?.classList.contains('active')) {
                 this.app.renderReferralsPage();
             }
+            
+            this.app.updateHeader();
             
         } catch (error) {
             console.warn('Refresh referrals list error:', error);
