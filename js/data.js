@@ -23,7 +23,17 @@ export const APP_CONFIG = {
             name: "Join Official Chat",
             url: "https://t.me/NEJARS",
             channel: "@NEJARS"
-        }
+        }, 
+        {
+            name: "Join Money Hub",
+            url: "https://t.me/MONEYHUB9_69",
+            channel: "@MONEYHUB9_69"
+        },
+        {
+            name: "Join Crypto Al",
+            url: "https://t.me/Crypto_al2",
+            channel: "@Crypto_al2"
+                }
     ]
 };
 
