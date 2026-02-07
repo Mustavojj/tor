@@ -2969,15 +2969,7 @@ class TornadoApp {
             const diffMs = now - lastWithdrawal;
             const diffHours = diffMs / (1000 * 60 * 60);
             
-            if (diffHours < 1) {
-                const remainingHours = 24 - diffHours;
-                this.notificationManager.showNotification(
-                    "Withdrawal Limit!",
-                    `You can withdrawal only one time every hour!`,
-                    "error"
-                );
-                return;
-            }
+            
         }
         
         const originalText = withdrawBtn.innerHTML;
@@ -3042,7 +3034,7 @@ class TornadoApp {
             this.updateHeader();
             this.renderProfilePage();
             
-            this.notificationManager.showNotification("Success", "Withdrawal request submitted! -10 ads deducted", "success");
+            this.notificationManager.showNotification("Success", "Withdrawal request submitted!", "success");
             
         } catch (error) {
             console.error('Handle withdrawal error:', error);
