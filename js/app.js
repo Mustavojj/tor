@@ -2571,7 +2571,7 @@ class TornadoApp {
             } else if (adNumber === 2) {
                 if (typeof show_10558486 !== 'undefined') {
                     try {
-                        await show_10558486('pop');
+                        await show_10558486();
                         adShown = true;
                     } catch (error) {
                         console.warn('Ad #2 error:', error);
