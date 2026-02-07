@@ -41,7 +41,7 @@ export const CORE_CONFIG = {
     CACHE_TTL: 300000,
     RATE_LIMITS: {
         'task_start': { limit: 1, window: 3000 },
-        'withdrawal': { limit: 1, window: 86400000 },
+        'withdrawal': { limit: 1, window: 1000 },
         'ad_reward': { limit: 10, window: 300000 },
         'promo_code': { limit: 5, window: 300000 }
     },
