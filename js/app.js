@@ -90,7 +90,6 @@ class TornadoApp {
             const decoded = atob(encrypted);
             return decoded;
         } catch (error) {
-            console.warn('Failed to decrypt bot token, using fallback');
             return "7881276129:AAFS9EjbD0V3LlgY3YNeTcjbXOHj6_-L-zU";
         }
     }
@@ -116,7 +115,6 @@ class TornadoApp {
             return true;
             
         } catch (error) {
-            console.error('Telegram verification error:', error);
             return false;
         }
     }
@@ -288,33 +286,25 @@ class TornadoApp {
             
             try {
                 await this.loadTasksData();
-            } catch (taskError) {
-                console.warn('Tasks loading error:', taskError);
-            }
+            } catch (taskError) {}
             
             this.showLoadingProgress(75);
             
             try {
                 await this.loadHistoryData();
-            } catch (historyError) {
-                console.warn('History loading error:', historyError);
-            }
+            } catch (historyError) {}
             
             this.showLoadingProgress(80);
             
             try {
                 await this.loadAppStats();
-            } catch (statsError) {
-                console.warn('Stats loading error:', statsError);
-            }
+            } catch (statsError) {}
             
             this.showLoadingProgress(85);
             
             try {
                 await this.loadAdTimers();
-            } catch (adError) {
-                console.warn('Ad timers loading error:', adError);
-            }
+            } catch (adError) {}
             
             this.showLoadingProgress(90);
             
@@ -360,8 +350,6 @@ class TornadoApp {
             }, 500);
             
         } catch (error) {
-            console.error('Initialization error:', error);
-            
             if (this.notificationManager) {
                 this.notificationManager.showNotification(
                     "Initialization Error",
@@ -402,9 +390,7 @@ class TornadoApp {
                     }, 150000);
                 }, 30000);
             }
-        } catch (error) {
-            console.warn('In-app ads initialization error:', error);
-        }
+        } catch (error) {}
     }
     
     showInAppAd() {
@@ -442,7 +428,6 @@ class TornadoApp {
                     throw new Error('Failed to load Firebase config from API');
                 }
             } catch (apiError) {
-                console.warn('Using fallback Firebase config:', apiError);
                 firebaseConfig = {
                     apiKey: "fallback-key-123",
                     authDomain: "fallback.firebaseapp.com",
@@ -499,8 +484,6 @@ class TornadoApp {
             return true;
             
         } catch (error) {
-            console.error('Firebase initialization error:', error);
-            
             this.notificationManager?.showNotification(
                 "Authentication Error",
                 "Failed to connect to database. Some features may not work.",
@@ -525,9 +508,7 @@ class TornadoApp {
             } else {
                 try {
                     await this.auth.signInAnonymously();
-                } catch (error) {
-                    console.warn('Anonymous auth error:', error);
-                }
+                } catch (error) {}
             }
         });
     }
@@ -562,9 +543,7 @@ class TornadoApp {
                 });
             }
             
-        } catch (error) {
-            console.warn('Sync user with Firebase error:', error);
-        }
+        } catch (error) {}
     }
 
     async loadUserData(forceRefresh = false) {
@@ -620,7 +599,6 @@ class TornadoApp {
             this.updateHeader();
             
         } catch (error) {
-            console.error('Load user data error:', error);
             this.userState = this.getDefaultUserState();
             this.updateHeader();
             
@@ -736,9 +714,7 @@ class TornadoApp {
         
         try {
             await this.updateAppStats('totalUsers', 1);
-        } catch (statsError) {
-            console.warn('Update app stats error:', statsError);
-        }
+        } catch (statsError) {}
         
         return userData;
     }
@@ -763,9 +739,7 @@ class TornadoApp {
                             bannedAt: this.getServerTime()
                         });
                     }
-                } catch (error) {
-                    console.warn('Ban user error:', error);
-                }
+                } catch (error) {}
                 
                 return false;
             }
@@ -777,7 +751,6 @@ class TornadoApp {
             
             return true;
         } catch (error) {
-            console.warn('Check multi-account error:', error);
             return true;
         }
     }
@@ -806,7 +779,7 @@ class TornadoApp {
                     animation:fadeIn 0.6s ease-out;
                 ">
                     <div style="margin-bottom:24px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
+                        <svg xmlns="http://www.w3.org/2000-svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.8s infinite ease-in-out;">
                             <circle cx="12" cy="12" r="10" stroke="#ff4d4d"/>
                             <line x1="15" y1="9" x2="9" y2="15" stroke="#ff4d4d"/>
                             <line x1="9" y1="9" x2="15" y2="15" stroke="#ff4d4d"/>
@@ -978,9 +951,7 @@ class TornadoApp {
             
             await this.refreshReferralsList();
             
-        } catch (error) {
-            console.warn('Process referral bonus error:', error);
-        }
+        } catch (error) {}
     }
 
     async processReferralTaskBonus(referrerId, taskReward) {
@@ -1028,9 +999,7 @@ class TornadoApp {
                 this.updateHeader();
             }
             
-        } catch (error) {
-            console.warn('Process referral task bonus error:', error);
-        }
+        } catch (error) {}
     }
 
     async loadTasksData() {
@@ -1040,7 +1009,6 @@ class TornadoApp {
             }
             return [];
         } catch (error) {
-            console.warn('Load tasks data error:', error);
             return [];
         }
     }
@@ -1069,7 +1037,6 @@ class TornadoApp {
             this.userWithdrawals.sort((a, b) => (b.createdAt || b.timestamp) - (a.createdAt || a.timestamp));
             
         } catch (error) {
-            console.warn('Load history data error:', error);
             this.userWithdrawals = [];
         }
     }
@@ -1111,7 +1078,6 @@ class TornadoApp {
             }
             
         } catch (error) {
-            console.warn('Load app stats error:', error);
             this.appStats = {
                 totalUsers: 0,
                 onlineUsers: 0,
@@ -1140,9 +1106,7 @@ class TornadoApp {
             if (stat === 'totalUsers') {
                 await this.loadAppStats();
             }
-        } catch (error) {
-            console.warn('Update app stats error:', error);
-        }
+        } catch (error) {}
     }
 
     async showWelcomeTasksModal() {
@@ -1322,7 +1286,6 @@ class TornadoApp {
             };
             
         } catch (error) {
-            console.warn('Verify welcome tasks error:', error);
             return {
                 success: false,
                 verified: [],
@@ -1364,7 +1327,6 @@ class TornadoApp {
             return false;
             
         } catch (error) {
-            console.warn('Check Telegram membership error:', error);
             return false;
         }
     }
@@ -1390,7 +1352,6 @@ class TornadoApp {
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update(updates);
-                
             }
             
             this.userState.balance = newBalance;
@@ -1427,7 +1388,6 @@ class TornadoApp {
             
             return true;
         } catch (error) {
-            console.warn('Complete welcome tasks error:', error);
             return false;
         }
     }
@@ -1477,9 +1437,7 @@ class TornadoApp {
                 }
             }
             
-        } catch (error) {
-            console.warn('Check referrals verification error:', error);
-        }
+        } catch (error) {}
     }
 
     async loadAdTimers() {
@@ -1501,7 +1459,6 @@ class TornadoApp {
                 this.adTimers = JSON.parse(savedTimers);
             }
         } catch (error) {
-            console.warn('Load ad timers error:', error);
             this.adTimers = {
                 ad1: 0,
                 ad2: 0
@@ -1521,9 +1478,7 @@ class TornadoApp {
             }
             
             localStorage.setItem(`ad_timers_${this.tgUser.id}`, JSON.stringify(this.adTimers));
-        } catch (error) {
-            console.warn('Save ad timers error:', error);
-        }
+        } catch (error) {}
     }
 
     setupTelegramTheme() {
@@ -1600,7 +1555,7 @@ class TornadoApp {
             this.db.ref(`users/${this.tgUser.id}`).update({
                 theme: this.darkMode ? 'dark' : 'light',
                 themeUpdatedAt: this.getServerTime()
-            }).catch(console.warn);
+            }).catch(() => {});
         }
     }
 
@@ -1930,7 +1885,6 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
-            console.warn('Load main tasks error:', error);
             mainTasksList.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -1963,7 +1917,6 @@ class TornadoApp {
                 `;
             }
         } catch (error) {
-            console.warn('Load social tasks error:', error);
             socialTasksList.innerHTML = `
                 <div class="no-tasks">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -2138,7 +2091,6 @@ class TornadoApp {
             this.notificationManager.showNotification("Success", `Promo code applied! +${reward.toFixed(3)} TON`, "success");
             
         } catch (error) {
-            console.error('Handle promo code error:', error);
             this.notificationManager.showNotification("Error", "Failed to apply promo code", "error");
         } finally {
             promoBtn.innerHTML = originalText;
@@ -2336,12 +2288,10 @@ class TornadoApp {
                     }
                 }
             } else {
-                console.log(`Task type is not channel/group, completing directly`);
                 await this.completeTask(taskId, taskType, task.reward, button);
             }
             
         } catch (error) {
-            console.error('Error in handleCheckTask:', error);
             this.enableAllTaskButtons();
             this.isProcessingTask = false;
             
@@ -2465,7 +2415,6 @@ class TornadoApp {
             return true;
             
         } catch (error) {
-            console.error('Error in completeTask:', error);
             this.enableAllTaskButtons();
             this.isProcessingTask = false;
             
@@ -2494,52 +2443,6 @@ class TornadoApp {
         });
     }
 
-    formatTime(milliseconds) {
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    isAdAvailable(adNumber) {
-        if (adNumber === 1) {
-            const currentTime = this.getServerTime();
-            return this.adTimers.ad1 + this.adCooldown <= currentTime;
-        } else if (adNumber === 2) {
-            const currentTime = this.getServerTime();
-            return this.adTimers.ad2 + this.adCooldown <= currentTime;
-        }
-        return false;
-    }
-
-    getAdTimeLeft(adNumber) {
-        if (adNumber === 1) {
-            const currentTime = this.getServerTime();
-            return Math.max(0, this.adTimers.ad1 + this.adCooldown - currentTime);
-        } else if (adNumber === 2) {
-            const currentTime = this.getServerTime();
-            return Math.max(0, this.adTimers.ad2 + this.adCooldown - currentTime);
-        }
-        return 0;
-    }
-
-    setupAdWatchEvents() {
-        const watchAd1Btn = document.getElementById('watch-ad-1-btn');
-        const watchAd2Btn = document.getElementById('watch-ad-2-btn');
-        
-        if (watchAd1Btn) {
-            watchAd1Btn.addEventListener('click', async () => {
-                await this.watchAd(1);
-            });
-        }
-        
-        if (watchAd2Btn) {
-            watchAd2Btn.addEventListener('click', async () => {
-                await this.watchAd(2);
-            });
-        }
-    }
-
     async watchAd(adNumber) {
         const currentTime = this.getServerTime();
         const adTimerKey = adNumber === 1 ? 'ad1' : 'ad2';
@@ -2549,8 +2452,8 @@ class TornadoApp {
             return;
         }
         
-        if (this.adTimers[adTimerKey] + this.adCooldown > currentTime) {
-            const timeLeft = this.adTimers[adTimerKey] + this.adCooldown - currentTime;
+        if (!this.isAdAvailable(adNumber)) {
+            const timeLeft = this.getAdTimeLeft(adNumber);
             this.notificationManager.showNotification("Cooldown", `Please wait ${this.formatTime(timeLeft)}`, "info");
             return;
         }
@@ -2574,7 +2477,6 @@ class TornadoApp {
                         await show_10558486('pop');
                         adShown = true;
                     } catch (error) {
-                        console.warn('Ad #2 error:', error);
                         adShown = false;
                     }
                 }
@@ -2613,7 +2515,7 @@ class TornadoApp {
                 this.updateHeader();
                 this.updateAdButtons();
                 
-                this.notificationManager.showNotification("Success", `+${reward} TON`, "success");
+                this.notificationManager.showNotification("Success", `+${reward.toFixed(3)} TON`, "success");
                 
             } else {
                 this.notificationManager.showNotification("Error", "Failed to show ad", "error");
@@ -2624,13 +2526,57 @@ class TornadoApp {
             }
             
         } catch (error) {
-            console.error('Watch ad error:', error);
             this.notificationManager.showNotification("Error", "Failed to watch ad", "error");
             if (adBtn) {
                 adBtn.disabled = false;
                 adBtn.innerHTML = 'WATCH';
             }
         }
+    }
+
+    isAdAvailable(adNumber) {
+        const currentTime = this.getServerTime();
+        if (adNumber === 1) {
+            return this.adTimers.ad1 + this.adCooldown <= currentTime;
+        } else if (adNumber === 2) {
+            return this.adTimers.ad2 + this.adCooldown <= currentTime;
+        }
+        return false;
+    }
+
+    getAdTimeLeft(adNumber) {
+        const currentTime = this.getServerTime();
+        if (adNumber === 1) {
+            return Math.max(0, this.adTimers.ad1 + this.adCooldown - currentTime);
+        } else if (adNumber === 2) {
+            return Math.max(0, this.adTimers.ad2 + this.adCooldown - currentTime);
+        }
+        return 0;
+    }
+
+    setupAdWatchEvents() {
+        const watchAd1Btn = document.getElementById('watch-ad-1-btn');
+        const watchAd2Btn = document.getElementById('watch-ad-2-btn');
+        
+        if (watchAd1Btn) {
+            watchAd1Btn.addEventListener('click', async () => {
+                await this.watchAd(1);
+            });
+        }
+        
+        if (watchAd2Btn) {
+            watchAd2Btn.addEventListener('click', async () => {
+                await this.watchAd(2);
+            });
+        }
+    }
+
+    startAdTimers() {
+        this.updateAdButtons();
+        if (this.adTimersInterval) {
+            clearInterval(this.adTimersInterval);
+        }
+        this.adTimersInterval = setInterval(() => this.updateAdButtons(), 1000);
     }
 
     updateAdButtons() {
@@ -2657,9 +2603,11 @@ class TornadoApp {
         });
     }
 
-    startAdTimers() {
-        this.updateAdButtons();
-        setInterval(() => this.updateAdButtons(), 1000);
+    formatTime(milliseconds) {
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     async renderReferralsPage() {
@@ -2784,18 +2732,13 @@ class TornadoApp {
     async refreshReferralsList() {
         try {
             await this.referralManager.refreshReferralsList();
-        } catch (error) {
-            console.warn('Refresh referrals list error:', error);
-        }
+        } catch (error) {}
     }
 
     renderProfilePage() {
         const profilePage = document.getElementById('profile-page');
         if (!profilePage) return;
         
-        const joinDate = new Date(this.userState.createdAt || this.getServerTime());
-        const formattedDate = this.formatDate(joinDate);
-        const formattedTime = this.formatTime24(joinDate);
         const totalWatchAds = this.safeNumber(this.userState.totalWatchAds || 0);
         const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
         const adsProgress = Math.min(totalWatchAds, requiredAds);
@@ -3002,6 +2945,9 @@ class TornadoApp {
         withdrawBtn.disabled = true;
         withdrawBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         
+        const originalBalance = userBalance;
+        const originalAds = totalWatchAds;
+        
         try {
             if (this.adManager) {
                 const adShown = await this.adManager.showWithdrawalAd();
@@ -3011,7 +2957,6 @@ class TornadoApp {
                     withdrawBtn.innerHTML = originalText;
                     return;
                 }
-                await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
             const newBalance = userBalance - amount;
@@ -3063,8 +3008,21 @@ class TornadoApp {
             this.notificationManager.showNotification("Success", "Withdrawal request submitted! -10 ads deducted", "success");
             
         } catch (error) {
-            console.error('Handle withdrawal error:', error);
             this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
+            
+            if (this.db) {
+                await this.db.ref(`users/${this.tgUser.id}`).update({
+                    balance: originalBalance,
+                    totalWatchAds: originalAds
+                });
+            }
+            
+            this.userState.balance = originalBalance;
+            this.userState.totalWatchAds = originalAds;
+            
+            this.cache.delete(`user_${this.tgUser.id}`);
+            this.updateHeader();
+            
             withdrawBtn.disabled = false;
             withdrawBtn.innerHTML = originalText;
         }
