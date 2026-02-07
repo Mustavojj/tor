@@ -2959,25 +2959,7 @@ class TornadoApp {
         }
         
         const rateLimitCheck = this.rateLimiter.checkLimit(this.tgUser.id, 'withdrawal');
-        if (!rateLimitCheck.allowed) {
-            const hours = Math.floor(rateLimitCheck.remaining / 3600);
-            const minutes = Math.floor((rateLimitCheck.remaining % 3600) / 60);
-            let timeMessage = '';
-            if (hours > 0) {
-                timeMessage = `${hours} hour${hours > 1 ? 's' : ''}`;
-                if (minutes > 0) {
-                    timeMessage += ` and ${minutes} minute${minutes > 1 ? 's' : ''}`;
-                }
-            } else {
-                timeMessage = `${minutes} minute${minutes > 1 ? 's' : ''}`;
-            }
-            this.notificationManager.showNotification(
-                "Withdrawal Limit!", 
-                `You can withdraw only one time every day. Please wait ${timeMessage}.`, 
-                "error"
-            );
-            return;
-        }
+        
         
         this.rateLimiter.addRequest(this.tgUser.id, 'withdrawal');
         
@@ -2987,11 +2969,11 @@ class TornadoApp {
             const diffMs = now - lastWithdrawal;
             const diffHours = diffMs / (1000 * 60 * 60);
             
-            if (diffHours < 24) {
+            if (diffHours < 1) {
                 const remainingHours = 24 - diffHours;
                 this.notificationManager.showNotification(
                     "Withdrawal Limit!",
-                    `You can withdrawal only one time every day. Please wait ${Math.ceil(remainingHours)} hours.`,
+                    `You can withdrawal only one time every hour!`,
                     "error"
                 );
                 return;
