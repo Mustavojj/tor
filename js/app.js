@@ -3046,7 +3046,7 @@ class TornadoApp {
             
         } catch (error) {
             console.error('Handle withdrawal error:', error);
-            this.notificationManager.showNotification("Error", "Failed to process withdrawal", "error");
+            this.notificationManager.showNotification("Error", `Failed to process withdrawal ${error}`, "error");
             withdrawBtn.disabled = false;
             withdrawBtn.innerHTML = originalText;
         }
