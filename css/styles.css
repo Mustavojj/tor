@@ -1853,3 +1853,25 @@ html {
     bottom: -10vh;
     left: 0;
     }
+
+/* إضافة مساحة سوداء 10% أسفل صفحة البروفايل */
+#profile-page {
+    position: relative;
+    min-height: 90vh;
+}
+
+#profile-page::after {
+    content: '';
+    display: block;
+    height: 10vh;
+    width: 100%;
+    background: #000000;
+    position: absolute;
+    bottom: -10vh;
+    left: 0;
+}
+
+/* للوضع النهاري */
+body.light-mode #profile-page::after {
+    background: #f8fafc;
+}
