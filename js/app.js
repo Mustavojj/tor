@@ -2593,7 +2593,7 @@ class TornadoApp {
                 const updates = {
                     balance: newBalance,
                     totalEarned: this.safeNumber(this.userState.totalEarned) + reward,
-                    totalTasks: this.safeNumber(this.userState.totalTasks) + 1,
+                    totalTasks: this.safeNumber(this.userState.totalTasks) + 0,
                     totalAds: newTotalAds,
                     totalWatchAds: newTotalWatchAds
                 };
