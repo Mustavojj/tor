@@ -1854,33 +1854,20 @@ html {
     left: 0;
     }
 
-/* مساحة 10% أسفل كل الصفحات */
-#tasks-tab,
-#more-tab,
+
+/* إضافة المسافة لكل الصفحات */
+.page {
+    position: relative;
+    min-height: 90vh !important;
+    padding-bottom: 10vh !important;
+}
+
+/* أو لكل صفحة على حدة */
+#tasks-page,
 #referrals-page,
-#profile-page {
+#profile-page,
+#more-tab {
     position: relative;
     min-height: 90vh;
+    padding-bottom: 10vh;
 }
-
-#tasks-tab::after,
-#more-tab::after,
-#referrals-page::after,
-#profile-page::after {
-    content: '';
-    display: block;
-    height: 10vh;
-    width: 100%;
-    background: #000000;
-    position: absolute;
-    bottom: -10vh;
-    left: 0;
-}
-
-/* للوضع النهاري */
-body.light-mode #tasks-tab::after,
-body.light-mode #more-tab::after,
-body.light-mode #referrals-page::after,
-body.light-mode #profile-page::after {
-    background: #f8fafc;
-    }
