@@ -1854,12 +1854,18 @@ html {
     left: 0;
     }
 
-/* إضافة مساحة سوداء 10% أسفل صفحة البروفايل */
+/* مساحة 10% أسفل كل الصفحات */
+#tasks-tab,
+#more-tab,
+#referrals-page,
 #profile-page {
     position: relative;
     min-height: 90vh;
 }
 
+#tasks-tab::after,
+#more-tab::after,
+#referrals-page::after,
 #profile-page::after {
     content: '';
     display: block;
@@ -1872,6 +1878,9 @@ html {
 }
 
 /* للوضع النهاري */
+body.light-mode #tasks-tab::after,
+body.light-mode #more-tab::after,
+body.light-mode #referrals-page::after,
 body.light-mode #profile-page::after {
     background: #f8fafc;
-}
+    }
