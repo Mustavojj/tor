@@ -1219,7 +1219,7 @@ class TornadoApp {
                     
                     window.open(url, '_blank');
                     
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
                     btn.disabled = true;
                     
                     setTimeout(async () => {
@@ -1420,7 +1420,7 @@ class TornadoApp {
             if (this.userState.referredBy) {
                 this.notificationManager.showNotification(
                     "Referral Bonus", 
-                    "Your referrer received 0.01 TON bonus!", 
+                    "Your referrer received ref bonus", 
                     "success"
                 );
             }
