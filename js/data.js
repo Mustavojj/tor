@@ -9,7 +9,7 @@ export const APP_CONFIG = {
     TASK_REWARD_BONUS: 0,
     MAX_DAILY_ADS: 999999,
     AD_COOLDOWN: 180000,
-    WATCH_AD_REWARD: 0.001,
+    WATCH_AD_REWARD: 0.0001,
     REQUIRED_ADS_FOR_WITHDRAWAL: 5,
     DEFAULT_USER_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
     BOT_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
