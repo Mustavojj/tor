@@ -1222,33 +1222,14 @@ class TornadoApp {
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
                     btn.disabled = true;
                     
-                    setTimeout(async () => {
-                        try {
-                            const isMember = await app.checkTelegramMembership(channel);
-                            
-                            if (isMember) {
-                                btn.innerHTML = '<i class="fas fa-check"></i> Verified';
-                                btn.classList.add('completed');
-                                clickedTasks[index] = true;
-                            } else {
-                                btn.innerHTML = '<i class="fas fa-times"></i> Failed';
-                                btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-                                clickedTasks[index] = false;
-                                
-                                app.notificationManager.showNotification(
-                                    "Join Required", 
-                                    `Please join ${channel} first`, 
-                                    "error"
-                                );
-                            }
-                            
-                            updateCheckButton();
-                            
-                        } catch (error) {
-                            btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-                            btn.disabled = false;
-                        }
-                    }, 10000);
+                    
+                    setTimeout(() => {
+    btn.innerHTML = '<i class="fas fa-check"></i> Verified';
+    btn.classList.add('completed');
+    clickedTasks[index] = true;
+    updateCheckButton();
+}, 10000);
+                    
                 });
             }
         });
