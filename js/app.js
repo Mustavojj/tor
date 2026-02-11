@@ -1284,17 +1284,7 @@ class TornadoApp {
             const missingChannels = [];
             const verifiedChannels = [];
             
-            for (const channel of channelsToCheck) {
-                const isMember = await this.checkTelegramMembership(channel);
-                
-                if (isMember) {
-                    verifiedChannels.push(channel);
-                } else {
-                    missingChannels.push(channel);
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+            
             
             return {
                 success: missingChannels.length === 0,
