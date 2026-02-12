@@ -22,11 +22,6 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'Access denied' });
         }
         
-        const contentLength = parseInt(req.headers['content-length'] || '0');
-        if (contentLength > 1000) {
-            return res.status(413).json({ error: 'Payload too large' });
-        }
-        
         const telegramUserId = req.headers['x-telegram-user'];
         const telegramAuth = req.headers['x-telegram-auth'];
         
@@ -50,21 +45,19 @@ export default async function handler(req, res) {
         
         global.firebaseRequestStore[requestKey].push(now);
         
-        // تشفير Firebase Config
         const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '{}');
         
         const safeConfig = {
-            apiKey: firebaseConfig.apiKey || "AIzaSyExample123",
-            authDomain: firebaseConfig.authDomain || "tornado-app.firebaseapp.com",
-            databaseURL: firebaseConfig.databaseURL || "https://tornado-app-default-rtdb.firebaseio.com",
-            projectId: firebaseConfig.projectId || "tornado-app",
-            storageBucket: firebaseConfig.storageBucket || "tornado-app.appspot.com",
-            messagingSenderId: firebaseConfig.messagingSenderId || "123456789012",
-            appId: firebaseConfig.appId || "1:123456789012:web:abcdef1234567890",
-            measurementId: firebaseConfig.measurementId || "G-EXAMPLE123"
+            apiKey: firebaseConfig.apiKey || "AIzaSyDefaultKey123",
+            authDomain: firebaseConfig.authDomain || "tornado-default.firebaseapp.com",
+            databaseURL: firebaseConfig.databaseURL || "https://tornado-default-rtdb.firebaseio.com",
+            projectId: firebaseConfig.projectId || "tornado-default",
+            storageBucket: firebaseConfig.storageBucket || "tornado-default.appspot.com",
+            messagingSenderId: firebaseConfig.messagingSenderId || "987654321098",
+            appId: firebaseConfig.appId || "1:987654321098:web:default1234567890",
+            measurementId: firebaseConfig.measurementId || "G-DEFAULT123"
         };
         
-        // تشفير البيانات قبل إرسالها
         const encryptedConfig = Buffer.from(JSON.stringify(safeConfig)).toString('base64');
         
         res.status(200).json({
@@ -72,7 +65,6 @@ export default async function handler(req, res) {
         });
         
     } catch (error) {
-        // تشفير الـ Fallback Config أيضاً
         const fallbackConfig = {
             apiKey: "AIzaSyDefaultKey123",
             authDomain: "tornado-default.firebaseapp.com",
