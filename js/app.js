@@ -1319,9 +1319,9 @@ class TornadoApp {
                         await app.completeWelcomeTasks();
                         modal.remove();
                         app.showPage('tasks-page');
-                        app.notificationManager.showNotification("Success", "Welcome tasks completed! +0.005 TON", "success");
+                        app.notificationManager.showNotification("Success", "Welcome bonus received!", "success");
                     } else {
-                        checkBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check & Get 0.005 TON';
+                        checkBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check & Get 0.01 TON';
                         checkBtn.disabled = false;
                         
                         if (verificationResult.missing.length > 0) {
@@ -1417,7 +1417,7 @@ class TornadoApp {
     
     async completeWelcomeTasks() {
         try {
-            const reward = 0.005;
+            const reward = 0.01;
             const currentBalance = this.safeNumber(this.userState.balance);
             const newBalance = currentBalance + reward;
             const currentTime = this.getServerTime();
