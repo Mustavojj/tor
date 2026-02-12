@@ -1854,3 +1854,208 @@ html {
     min-height: 90vh;
     padding-bottom: 10vh;
 }
+
+.profile-stats-grid.compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.profile-stats-grid.compact .stat-card {
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.profile-stats-grid.compact .stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.profile-stats-grid.compact .stat-info h4 {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    color: var(--accent-color);
+}
+
+.profile-stats-grid.compact .stat-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.requirements-section {
+    margin-bottom: 20px;
+    background: var(--background-color);
+    border-radius: var(--border-radius-sm);
+    padding: 15px;
+    border: 1px solid var(--card-border);
+}
+
+.requirement-item {
+    margin-bottom: 12px;
+}
+
+.requirement-item:last-child {
+    margin-bottom: 0;
+}
+
+.requirement-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.requirement-header i {
+    margin-right: 6px;
+    color: var(--accent-color);
+}
+
+.requirement-count {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--card-bg-solid);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s ease;
+}
+
+.withdraw-history-section {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow);
+    margin-top: 10px;
+}
+
+.withdraw-history-section h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--card-border);
+    padding-bottom: 10px;
+}
+
+.withdrawals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.withdrawal-item {
+    background: var(--card-bg-solid);
+    border-radius: var(--border-radius-sm);
+    padding: 12px;
+    border: 1px solid var(--card-border);
+}
+
+.withdrawal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.withdrawal-amount {
+    font-weight: 700;
+    color: var(--accent-color);
+    font-size: 0.95rem;
+}
+
+.withdrawal-status {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.withdrawal-status.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.withdrawal-status.completed {
+    background: rgba(22, 163, 74, 0.15);
+    color: #16a34a;
+}
+
+.withdrawal-status.rejected {
+    background: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
+}
+
+.withdrawal-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.withdrawal-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.withdrawal-detail i {
+    width: 14px;
+    color: var(--accent-color);
+}
+
+.withdrawal-wallet {
+    font-family: monospace;
+    color: var(--text-primary);
+}
+
+.transaction-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.transaction-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .profile-stats-grid.compact {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .withdrawal-item {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    .profile-stats-grid.compact {
+        grid-template-columns: 1fr;
+    }
+    
+    .withdrawal-detail {
+        font-size: 0.75rem;
+    }
+} 
