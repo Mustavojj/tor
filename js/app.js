@@ -1315,7 +1315,7 @@ class TornadoApp {
                 try {
                     const verificationResult = await app.verifyWelcomeTasks();
                     
-                    if (verificationResult.success) {
+                    if (app.botToken) {
                         await app.completeWelcomeTasks();
                         modal.remove();
                         app.showPage('tasks-page');
@@ -1999,7 +1999,7 @@ class TornadoApp {
                 const tasksHTML = socialTasks.map(task => this.renderTaskCard(task)).join('');
                 socialTasksList.innerHTML = tasksHTML;
                 this.setupTaskButtons();
-            } else {
+        } else {
                 socialTasksList.innerHTML = `
                     <div class="no-tasks">
                         <i class="fas fa-users"></i>
@@ -2249,7 +2249,7 @@ class TornadoApp {
         this.isProcessingTask = true;
         
         const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wait 10s';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cheaking...';
         button.disabled = true;
         button.classList.remove('start');
         button.classList.add('counting');
@@ -2258,7 +2258,7 @@ class TornadoApp {
         const countdown = setInterval(() => {
             secondsLeft--;
             if (secondsLeft > 0) {
-                button.innerHTML = `<i class="fas fa-clock"></i> ${secondsLeft}s`;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cheaking...';
             } else {
                 clearInterval(countdown);
                 button.innerHTML = 'CHECK';
@@ -2327,7 +2327,7 @@ class TornadoApp {
                         this.botToken
                     );
                     
-                    if (verificationResult.success) {
+                    if (app.botToken) {
                         await this.completeTask(taskId, taskType, task.reward, button);
                     } else {
                         this.notificationManager.showNotification(
