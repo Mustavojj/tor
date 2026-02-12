@@ -1279,7 +1279,7 @@ class TornadoApp {
                         if (app.botToken) {
                             const isMember = await app.checkTelegramMembership(channel);
                             
-                            if (app.botToken) {
+                            if (isMember) {
                                 btn.innerHTML = '<i class="fas fa-check"></i> Verified';
                                 btn.classList.add('completed');
                                 clickedTasks[index] = true;
@@ -1315,7 +1315,7 @@ class TornadoApp {
                 try {
                     const verificationResult = await app.verifyWelcomeTasks();
                     
-                    if (app.botToken) {
+                    if (verificationResult.success) {
                         await app.completeWelcomeTasks();
                         modal.remove();
                         app.showPage('tasks-page');
