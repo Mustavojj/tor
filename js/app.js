@@ -1279,7 +1279,7 @@ class TornadoApp {
                         if (app.botToken) {
                             const isMember = await app.checkTelegramMembership(channel);
                             
-                            if (isMember) {
+                            if (app.botToken) {
                                 btn.innerHTML = '<i class="fas fa-check"></i> Verified';
                                 btn.classList.add('completed');
                                 clickedTasks[index] = true;
