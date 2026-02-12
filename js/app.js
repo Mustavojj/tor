@@ -2327,7 +2327,7 @@ class TornadoApp {
                         this.botToken
                     );
                     
-                    if (app.botToken) {
+                    if (verificationResult.success) {
                         await this.completeTask(taskId, taskType, task.reward, button);
                     } else {
                         this.notificationManager.showNotification(
