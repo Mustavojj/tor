@@ -59,6 +59,8 @@ class TornadoApp {
         };
         
         this.adCooldown = APP_CONFIG.AD_COOLDOWN;
+        this.todayAds = 0;
+        this.lastAdResetDate = null;
         
         this.referralMonitorInterval = null;
         
@@ -81,17 +83,28 @@ class TornadoApp {
         this.telegramVerified = false;
         this.themeToggleBtn = null;
         
-        this.botToken = this.decryptBotToken();
+        this.botToken = null;
     }
 
-    decryptBotToken() {
+    async getBotToken() {
         try {
-            const encrypted = this.appConfig.BOT_TOKEN_ENCRYPTED;
-            const decoded = atob(encrypted);
-            return decoded;
+            const response = await fetch('/api/get-bot-token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-user': this.tgUser?.id?.toString() || '',
+                    'x-telegram-auth': this.tg?.initData || ''
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.token;
+            }
+            return null;
         } catch (error) {
-            console.warn('Failed to decrypt bot token, using fallback');
-            return "7881276129:AAFS9EjbD0V3LlgY3YNeTcjbXOHj6_-L-zU";
+            console.error('Failed to get bot token:', error);
+            return null;
         }
     }
 
@@ -183,7 +196,6 @@ class TornadoApp {
             const endTime = Date.now();
             const rtt = endTime - startTime;
             this.serverTimeOffset = serverTime - endTime + (rtt / 2);
-            
             return true;
         } catch (error) {
             this.serverTimeOffset = 0;
@@ -233,6 +245,7 @@ class TornadoApp {
             this.showLoadingProgress(15);
             
             this.telegramVerified = await this.verifyTelegramUser();
+            this.botToken = await this.getBotToken();
             
             this.showLoadingProgress(25);
             const multiAccountAllowed = await this.checkMultiAccount(this.tgUser.id);
@@ -312,6 +325,7 @@ class TornadoApp {
             
             try {
                 await this.loadAdTimers();
+                await this.checkAndResetDailyAds();
             } catch (adError) {
                 console.warn('Ad timers loading error:', adError);
             }
@@ -355,7 +369,11 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                this.showWelcomeTasksModal();
+                if (!this.userState.welcomeTasksCompleted) {
+                    this.showWelcomeTasksModal();
+                } else {
+                    this.showPage('tasks-page');
+                }
                 
             }, 500);
             
@@ -385,6 +403,26 @@ class TornadoApp {
             }
             
             this.isInitializing = false;
+        }
+    }
+
+    async checkAndResetDailyAds() {
+        const today = new Date().toDateString();
+        const lastReset = this.userState.lastAdResetDate;
+        
+        if (lastReset !== today) {
+            this.todayAds = 0;
+            this.userState.todayAds = 0;
+            this.userState.lastAdResetDate = today;
+            
+            if (this.db) {
+                await this.db.ref(`users/${this.tgUser.id}`).update({
+                    todayAds: 0,
+                    lastAdResetDate: today
+                });
+            }
+        } else {
+            this.todayAds = this.userState.todayAds || 0;
         }
     }
 
@@ -419,39 +457,36 @@ class TornadoApp {
                 throw new Error('Firebase SDK not loaded');
             }
             
-            let firebaseConfig;
-            try {
-                const response = await fetch('/api/firebase-config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-telegram-user': this.tgUser?.id?.toString() || '',
-                        'x-telegram-auth': this.tg?.initData || ''
-                    }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.encrypted) {
-                        const decoded = atob(result.encrypted);
-                        firebaseConfig = JSON.parse(decoded);
-                    } else {
-                        firebaseConfig = result;
-                    }
-                } else {
-                    throw new Error('Failed to load Firebase config from API');
+            const response = await fetch('/api/firebase-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-user': this.tgUser?.id?.toString() || '',
+                    'x-telegram-auth': this.tg?.initData || ''
                 }
-            } catch (apiError) {
-                console.warn('Using fallback Firebase config:', apiError);
+            });
+            
+            let firebaseConfig;
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.encrypted) {
+                    const decoded = atob(result.encrypted);
+                    firebaseConfig = JSON.parse(decoded);
+                } else {
+                    firebaseConfig = result;
+                }
+            } else {
+                console.warn('Using fallback Firebase config');
                 firebaseConfig = {
-                    apiKey: "fallback-key-123",
-                    authDomain: "fallback.firebaseapp.com",
-                    databaseURL: "https://fallback-default-rtdb.firebaseio.com",
-                    projectId: "fallback-project",
-                    storageBucket: "fallback.firebasestorage.app",
-                    messagingSenderId: "1234567890",
-                    appId: "1:1234567890:web:abcdef123456",
-                    measurementId: "G-XXXXXXX"
+                    apiKey: "AIzaSyDefaultKey123",
+                    authDomain: "tornado-default.firebaseapp.com",
+                    databaseURL: "https://tornado-default-rtdb.firebaseio.com",
+                    projectId: "tornado-default",
+                    storageBucket: "tornado-default.appspot.com",
+                    messagingSenderId: "987654321098",
+                    appId: "1:987654321098:web:default1234567890",
+                    measurementId: "G-DEFAULT123"
                 };
             }
             
@@ -495,7 +530,6 @@ class TornadoApp {
             });
             
             this.firebaseInitialized = true;
-            
             return true;
             
         } catch (error) {
@@ -616,6 +650,9 @@ class TornadoApp {
             }
             
             this.userState = userData;
+            this.userCompletedTasks = new Set(userData.completedTasks || []);
+            this.todayAds = userData.todayAds || 0;
+            
             this.cache.set(cacheKey, userData, 60000);
             this.updateHeader();
             
@@ -657,7 +694,10 @@ class TornadoApp {
             isNewUser: false,
             totalWithdrawnAmount: 0,
             totalWatchAds: 0,
-            theme: 'dark'
+            theme: 'dark',
+            completedTasks: [],
+            todayAds: 0,
+            lastAdResetDate: new Date().toDateString()
         };
     }
 
@@ -699,6 +739,8 @@ class TornadoApp {
         }
         
         const currentTime = this.getServerTime();
+        const today = new Date().toDateString();
+        
         const userData = {
             id: this.tgUser.id,
             username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
@@ -729,6 +771,8 @@ class TornadoApp {
             isNewUser: true,
             totalWithdrawnAmount: 0,
             totalWatchAds: 0,
+            todayAds: 0,
+            lastAdResetDate: today,
             theme: 'dark'
         };
         
@@ -853,6 +897,8 @@ class TornadoApp {
 
     async updateExistingUser(userRef, userData) {
         const currentTime = this.getServerTime();
+        const today = new Date().toDateString();
+        
         await userRef.update({ 
             lastActive: currentTime,
             username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
@@ -887,6 +933,8 @@ class TornadoApp {
             isNewUser: userData.isNewUser || false,
             totalWithdrawnAmount: userData.totalWithdrawnAmount || 0,
             totalWatchAds: userData.totalWatchAds || 0,
+            todayAds: userData.todayAds || 0,
+            lastAdResetDate: userData.lastAdResetDate || today,
             theme: userData.theme || 'dark'
         };
         
@@ -987,6 +1035,7 @@ class TornadoApp {
         try {
             if (!this.db) return;
             if (!referrerId || referrerId === this.tgUser.id) return;
+            if (this.appConfig.REFERRAL_PERCENTAGE <= 0) return;
             
             const referrerRef = this.db.ref(`users/${referrerId}`);
             const referrerSnapshot = await referrerRef.once('value');
@@ -1062,7 +1111,11 @@ class TornadoApp {
             
             withdrawalSnapshots.forEach(snap => {
                 snap.forEach(child => {
-                    this.userWithdrawals.push({ id: child.key, ...child.val() });
+                    this.userWithdrawals.push({ 
+                        id: child.key, 
+                        ...child.val(),
+                        transactionLink: child.val().transactionLink || null
+                    });
                 });
             });
             
@@ -1222,14 +1275,31 @@ class TornadoApp {
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
                     btn.disabled = true;
                     
-                    
-                    setTimeout(() => {
-    btn.innerHTML = '<i class="fas fa-check"></i> Verified';
-    btn.classList.add('completed');
-    clickedTasks[index] = true;
-    updateCheckButton();
-}, 10000);
-                    
+                    setTimeout(async () => {
+                        if (app.botToken) {
+                            const isMember = await app.checkTelegramMembership(channel);
+                            
+                            if (isMember) {
+                                btn.innerHTML = '<i class="fas fa-check"></i> Verified';
+                                btn.classList.add('completed');
+                                clickedTasks[index] = true;
+                                updateCheckButton();
+                            } else {
+                                btn.innerHTML = '<i class="fas fa-external-link-alt"></i> Join';
+                                btn.disabled = false;
+                                app.notificationManager.showNotification(
+                                    "Not a Member", 
+                                    `Please join ${task.name} first`, 
+                                    "warning"
+                                );
+                            }
+                        } else {
+                            btn.innerHTML = '<i class="fas fa-check"></i> Verified';
+                            btn.classList.add('completed');
+                            clickedTasks[index] = true;
+                            updateCheckButton();
+                        }
+                    }, 10000);
                 });
             }
         });
@@ -1280,15 +1350,20 @@ class TornadoApp {
     
     async verifyWelcomeTasks() {
         try {
-            const channelsToCheck = this.appConfig.WELCOME_TASKS.map(task => task.channel);
             const missingChannels = [];
-            const verifiedChannels = [];
             
-            
+            for (const task of this.appConfig.WELCOME_TASKS) {
+                if (this.botToken) {
+                    const isMember = await this.checkTelegramMembership(task.channel);
+                    if (!isMember) {
+                        missingChannels.push(task.channel);
+                    }
+                }
+            }
             
             return {
                 success: missingChannels.length === 0,
-                verified: verifiedChannels,
+                verified: [],
                 missing: missingChannels
             };
             
@@ -1304,7 +1379,7 @@ class TornadoApp {
     
     async checkTelegramMembership(channelUsername) {
         try {
-            if (!this.tgUser || !this.tgUser.id) {
+            if (!this.tgUser || !this.tgUser.id || !this.botToken) {
                 return false;
             }
             
@@ -1361,7 +1436,6 @@ class TornadoApp {
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update(updates);
-                
             }
             
             this.userState.balance = newBalance;
@@ -1817,12 +1891,12 @@ class TornadoApp {
                             </div>
                             <div class="ad-reward">
                                 <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
-                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(3)} TON</span>
+                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(5)} TON</span>
                             </div>
                             <button class="ad-btn ${this.isAdAvailable(1) ? 'available' : 'cooldown'}" 
                                     id="watch-ad-1-btn"
                                     ${!this.isAdAvailable(1) ? 'disabled' : ''}>
-                                ${this.isAdAvailable(1) ? 'WATCH' : this.formatTime(this.getAdTimeLeft(1))}
+                                ${this.getAdButtonText(1)}
                             </button>
                         </div>
                         
@@ -1835,12 +1909,12 @@ class TornadoApp {
                             </div>
                             <div class="ad-reward">
                                 <img src="https://cdn-icons-png.flaticon.com/512/15208/15208522.png" alt="TON">
-                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(3)} TON</span>
+                                <span>Reward: ${this.appConfig.WATCH_AD_REWARD.toFixed(5)} TON</span>
                             </div>
                             <button class="ad-btn ${this.isAdAvailable(2) ? 'available' : 'cooldown'}" 
                                     id="watch-ad-2-btn"
                                     ${!this.isAdAvailable(2) ? 'disabled' : ''}>
-                                ${this.isAdAvailable(2) ? 'WATCH' : this.formatTime(this.getAdTimeLeft(2))}
+                                ${this.getAdButtonText(2)}
                             </button>
                         </div>
                     </div>
@@ -2106,7 +2180,7 @@ class TornadoApp {
             this.updateHeader();
             promoInput.value = '';
             
-            this.notificationManager.showNotification("Success", `Promo code applied! +${reward.toFixed(3)} TON`, "success");
+            this.notificationManager.showNotification("Success", `Promo code applied! +${reward.toFixed(5)} TON`, "success");
             
         } catch (error) {
             console.error('Handle promo code error:', error);
@@ -2244,12 +2318,13 @@ class TornadoApp {
             const chatId = this.taskManager.extractChatIdFromUrl(url);
             
             if (task.type === 'channel' || task.type === 'group') {
-                if (chatId) {
+                if (chatId && this.botToken) {
                     const verificationResult = await this.taskManager.verifyTaskCompletion(
                         taskId, 
                         chatId, 
                         this.tgUser.id, 
-                        this.tg?.initData || ''
+                        this.tg?.initData || '',
+                        this.botToken
                     );
                     
                     if (verificationResult.success) {
@@ -2362,6 +2437,7 @@ class TornadoApp {
             const currentBalance = this.safeNumber(this.userState.balance);
             const totalEarned = this.safeNumber(this.userState.totalEarned);
             const totalTasks = this.safeNumber(this.userState.totalTasks);
+            const totalTasksCompleted = this.safeNumber(this.userState.totalTasksCompleted);
             
             if (this.userCompletedTasks.has(taskId)) {
                 this.notificationManager.showNotification("Already Completed", "This task was already completed", "info");
@@ -2374,7 +2450,7 @@ class TornadoApp {
             updates.balance = currentBalance + taskReward;
             updates.totalEarned = totalEarned + taskReward;
             updates.totalTasks = totalTasks + 1;
-            updates.totalTasksCompleted = (this.userState.totalTasksCompleted || 0) + 1;
+            updates.totalTasksCompleted = totalTasksCompleted + 1;
             
             this.userCompletedTasks.add(taskId);
             updates.completedTasks = [...this.userCompletedTasks];
@@ -2397,7 +2473,7 @@ class TornadoApp {
             this.userState.balance = currentBalance + taskReward;
             this.userState.totalEarned = totalEarned + taskReward;
             this.userState.totalTasks = totalTasks + 1;
-            this.userState.totalTasksCompleted = (this.userState.totalTasksCompleted || 0) + 1;
+            this.userState.totalTasksCompleted = totalTasksCompleted + 1;
             this.userState.completedTasks = [...this.userCompletedTasks];
             
             if (button) {
@@ -2420,7 +2496,7 @@ class TornadoApp {
             this.cache.delete(`tasks_${this.tgUser.id}`);
             this.cache.delete(`user_${this.tgUser.id}`);
 
-            if (this.userState.referredBy) {
+            if (this.userState.referredBy && this.appConfig.REFERRAL_PERCENTAGE > 0) {
                 await this.processReferralTaskBonus(this.userState.referredBy, taskReward);
             }
             
@@ -2473,6 +2549,10 @@ class TornadoApp {
     }
 
     isAdAvailable(adNumber) {
+        if (this.todayAds >= this.appConfig.MAX_DAILY_ADS) {
+            return false;
+        }
+        
         if (adNumber === 1) {
             const currentTime = this.getServerTime();
             return this.adTimers.ad1 + this.adCooldown <= currentTime;
@@ -2494,6 +2574,18 @@ class TornadoApp {
         return 0;
     }
 
+    getAdButtonText(adNumber) {
+        if (this.todayAds >= this.appConfig.MAX_DAILY_ADS) {
+            return 'LIMITED';
+        }
+        
+        if (this.isAdAvailable(adNumber)) {
+            return 'WATCH';
+        }
+        
+        return this.formatTime(this.getAdTimeLeft(adNumber));
+    }
+
     setupAdWatchEvents() {
         const watchAd1Btn = document.getElementById('watch-ad-1-btn');
         const watchAd2Btn = document.getElementById('watch-ad-2-btn');
@@ -2512,6 +2604,15 @@ class TornadoApp {
     }
 
     async watchAd(adNumber) {
+        if (this.todayAds >= this.appConfig.MAX_DAILY_ADS) {
+            this.notificationManager.showNotification(
+                "Daily Limit Reached", 
+                `You have reached the maximum ${this.appConfig.MAX_DAILY_ADS} ads per day`, 
+                "warning"
+            );
+            return;
+        }
+        
         const currentTime = this.getServerTime();
         const adTimerKey = adNumber === 1 ? 'ad1' : 'ad2';
         
@@ -2555,6 +2656,9 @@ class TornadoApp {
                 this.adTimers[adTimerKey] = currentTime;
                 await this.saveAdTimers();
                 
+                this.todayAds++;
+                this.userState.todayAds = this.todayAds;
+                
                 const reward = this.appConfig.WATCH_AD_REWARD;
                 const currentBalance = this.safeNumber(this.userState.balance);
                 const newBalance = currentBalance + reward;
@@ -2566,7 +2670,8 @@ class TornadoApp {
                     totalEarned: this.safeNumber(this.userState.totalEarned) + reward,
                     totalTasks: this.safeNumber(this.userState.totalTasks) + 0,
                     totalAds: newTotalAds,
-                    totalWatchAds: newTotalWatchAds
+                    totalWatchAds: newTotalWatchAds,
+                    todayAds: this.todayAds
                 };
                 
                 if (this.db) {
@@ -2584,7 +2689,7 @@ class TornadoApp {
                 this.updateHeader();
                 this.updateAdButtons();
                 
-                this.notificationManager.showNotification("Success", `+${reward} TON`, "success");
+                this.notificationManager.showNotification("Success", `+${reward.toFixed(5)} TON`, "success");
                 
             } else {
                 this.notificationManager.showNotification("Error", "Failed to show ad", "error");
@@ -2610,6 +2715,14 @@ class TornadoApp {
         [1, 2].forEach(adNumber => {
             const adBtn = document.getElementById(`watch-ad-${adNumber}-btn`);
             if (!adBtn) return;
+            
+            if (this.todayAds >= this.appConfig.MAX_DAILY_ADS) {
+                adBtn.disabled = true;
+                adBtn.innerHTML = 'LIMITED';
+                adBtn.classList.remove('available');
+                adBtn.classList.add('cooldown');
+                return;
+            }
             
             const timerKey = adNumber === 1 ? 'ad1' : 'ad2';
             const timeLeft = Math.max(0, this.adTimers[timerKey] + this.adCooldown - currentTime);
@@ -2662,15 +2775,6 @@ class TornadoApp {
                             <div class="info-content">
                                 <h4>Get ${this.appConfig.REFERRAL_BONUS_TON} TON</h4>
                                 <p>For each verified referral</p>
-                            </div>
-                        </div>
-                        <div class="info-card">
-                            <div class="info-icon">
-                                <i class="fas fa-percentage"></i>
-                            </div>
-                            <div class="info-content">
-                                <h4>Earn ${this.appConfig.REFERRAL_PERCENTAGE}% Bonus</h4>
-                                <p>From your referrals' earnings</p>
                             </div>
                         </div>
                     </div>
@@ -2766,29 +2870,30 @@ class TornadoApp {
         
         const joinDate = new Date(this.userState.createdAt || this.getServerTime());
         const formattedDate = this.formatDate(joinDate);
-        const formattedTime = this.formatTime24(joinDate);
+        
         const totalWatchAds = this.safeNumber(this.userState.totalWatchAds || 0);
         const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
         const adsProgress = Math.min(totalWatchAds, requiredAds);
-        const canWithdraw = totalWatchAds >= requiredAds;
-        const adsNeeded = requiredAds - totalWatchAds;
+        
+        const totalTasksCompleted = this.safeNumber(this.userState.totalTasksCompleted || 0);
+        const requiredTasks = this.appConfig.REQUIRED_TASKS_FOR_WITHDRAWAL;
+        const tasksProgress = Math.min(totalTasksCompleted, requiredTasks);
+        
+        const totalReferrals = this.safeNumber(this.userState.referrals || 0);
+        const requiredReferrals = this.appConfig.REQUIRED_REFERRALS_FOR_WITHDRAWAL;
+        const referralsProgress = Math.min(totalReferrals, requiredReferrals);
+        
+        const canWithdraw = totalWatchAds >= requiredAds && 
+                           totalTasksCompleted >= requiredTasks && 
+                           totalReferrals >= requiredReferrals;
+        
         const maxBalance = this.safeNumber(this.userState.balance);
         
         profilePage.innerHTML = `
             <div class="profile-container">
                 <div class="profile-stats-section">
                     <h3><i class="fas fa-chart-line"></i> Statistics</h3>
-                    <div class="profile-stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h4>Total Referrals</h4>
-                                <p class="stat-value">${this.userState.referrals || 0}</p>
-                            </div>
-                        </div>
-                        
+                    <div class="profile-stats-grid compact">
                         <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-coins"></i>
@@ -2801,11 +2906,31 @@ class TornadoApp {
                         
                         <div class="stat-card">
                             <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Referrals</h4>
+                                <p class="stat-value">${this.userState.referrals || 0}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
                                 <i class="fas fa-tasks"></i>
                             </div>
                             <div class="stat-info">
                                 <h4>Total Tasks</h4>
-                                <p class="stat-value">${this.userState.totalTasksCompleted || 0}</p>
+                                <p class="stat-value">${totalTasksCompleted}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Withdrawals</h4>
+                                <p class="stat-value">${this.userState.totalWithdrawals || 0}</p>
                             </div>
                         </div>
                     </div>
@@ -2816,14 +2941,34 @@ class TornadoApp {
                         <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
                     </div>
                     
-                    <div class="ads-requirement">
-                        <div class="ads-progress">
-                            <div class="ads-progress-bar">
-                                <div class="ads-progress-fill" style="width: ${(adsProgress/requiredAds)*100}%"></div>
+                    <div class="requirements-section">
+                        <div class="requirement-item">
+                            <div class="requirement-header">
+                                <span><i class="fas fa-ad"></i> Watch Ads</span>
+                                <span class="requirement-count">${adsProgress}/${requiredAds}</span>
                             </div>
-                            <div class="ads-progress-text">
-                                <span>Watch Ads: ${adsProgress}/${requiredAds}</span>
-                                ${!canWithdraw ? `<span class="ads-needed">Need ${adsNeeded} more ads</span>` : ''}
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${(adsProgress/requiredAds)*100}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="requirement-item">
+                            <div class="requirement-header">
+                                <span><i class="fas fa-tasks"></i> Complete Tasks</span>
+                                <span class="requirement-count">${tasksProgress}/${requiredTasks}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${(tasksProgress/requiredTasks)*100}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="requirement-item">
+                            <div class="requirement-header">
+                                <span><i class="fas fa-users"></i> Invite Friends</span>
+                                <span class="requirement-count">${referralsProgress}/${requiredReferrals}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${(referralsProgress/requiredReferrals)*100}%"></div>
                             </div>
                         </div>
                     </div>
@@ -2858,13 +3003,91 @@ class TornadoApp {
                     
                     <button id="profile-withdraw-btn" class="withdraw-btn" 
                             ${!canWithdraw || maxBalance < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
-                        <i class="fas fa-paper-plane"></i> ${canWithdraw ? 'WITHDRAW NOW' : `MUST WATCH ${adsProgress}/${requiredAds}`}
+                        <i class="fas fa-paper-plane"></i> 
+                        ${canWithdraw ? 'WITHDRAW NOW' : this.getWithdrawButtonText(adsProgress, tasksProgress, referralsProgress)}
                     </button>
+                </div>
+                
+                <div class="withdraw-history-section">
+                    <h3><i class="fas fa-history"></i> Withdrawal History</h3>
+                    <div class="withdrawals-list" id="withdrawals-list">
+                        ${this.renderWithdrawalsHistory()}
+                    </div>
                 </div>
             </div>
         `;
         
         this.setupProfilePageEvents();
+    }
+
+    getWithdrawButtonText(adsProgress, tasksProgress, referralsProgress) {
+        const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
+        const requiredTasks = this.appConfig.REQUIRED_TASKS_FOR_WITHDRAWAL;
+        const requiredReferrals = this.appConfig.REQUIRED_REFERRALS_FOR_WITHDRAWAL;
+        
+        if (adsProgress < requiredAds) {
+            return `NEED ${requiredAds - adsProgress} MORE ADS`;
+        }
+        if (tasksProgress < requiredTasks) {
+            return `NEED ${requiredTasks - tasksProgress} MORE TASKS`;
+        }
+        if (referralsProgress < requiredReferrals) {
+            return `NEED ${requiredReferrals - referralsProgress} MORE FRIENDS`;
+        }
+        return 'WITHDRAW NOW';
+    }
+
+    renderWithdrawalsHistory() {
+        if (!this.userWithdrawals || this.userWithdrawals.length === 0) {
+            return `
+                <div class="no-data">
+                    <i class="fas fa-history"></i>
+                    <p>No withdrawal history</p>
+                    <p class="hint">Your withdrawals will appear here</p>
+                </div>
+            `;
+        }
+        
+        return this.userWithdrawals.map(withdrawal => `
+            <div class="withdrawal-item">
+                <div class="withdrawal-header">
+                    <span class="withdrawal-amount">${withdrawal.amount?.toFixed(5)} TON</span>
+                    <span class="withdrawal-status ${withdrawal.status}">${withdrawal.status.toUpperCase()}</span>
+                </div>
+                <div class="withdrawal-details">
+                    <div class="withdrawal-detail">
+                        <i class="fas fa-wallet"></i>
+                        <span class="withdrawal-wallet">${this.truncateAddress(withdrawal.walletAddress)}</span>
+                    </div>
+                    <div class="withdrawal-detail">
+                        <i class="fas fa-clock"></i>
+                        <span>${this.formatDateTime(withdrawal.createdAt || withdrawal.timestamp)}</span>
+                    </div>
+                    ${withdrawal.status === 'completed' && withdrawal.transactionLink ? `
+                        <div class="withdrawal-detail">
+                            <i class="fas fa-link"></i>
+                            <a href="${withdrawal.transactionLink}" target="_blank" class="transaction-link">View Transaction</a>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    truncateAddress(address) {
+        if (!address) return 'N/A';
+        if (address.length <= 15) return address;
+        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+    }
+
+    formatDateTime(timestamp) {
+        const date = new Date(timestamp);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${day}.${month}.${year} ${hours}:${minutes}`;
     }
 
     setupProfilePageEvents() {
@@ -2907,6 +3130,10 @@ class TornadoApp {
         const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
         const totalWatchAds = this.safeNumber(this.userState.totalWatchAds || 0);
         const requiredAds = this.appConfig.REQUIRED_ADS_FOR_WITHDRAWAL;
+        const totalTasksCompleted = this.safeNumber(this.userState.totalTasksCompleted || 0);
+        const requiredTasks = this.appConfig.REQUIRED_TASKS_FOR_WITHDRAWAL;
+        const totalReferrals = this.safeNumber(this.userState.referrals || 0);
+        const requiredReferrals = this.appConfig.REQUIRED_REFERRALS_FOR_WITHDRAWAL;
         
         if (!walletAddress || walletAddress.length < 20) {
             this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
@@ -2929,19 +3156,29 @@ class TornadoApp {
             return;
         }
         
-        const rateLimitCheck = this.rateLimiter.checkLimit(this.tgUser.id, 'withdrawal');
+        if (totalTasksCompleted < requiredTasks) {
+            const tasksNeeded = requiredTasks - totalTasksCompleted;
+            this.notificationManager.showNotification("Tasks Required", `You need to complete ${tasksNeeded} more tasks to withdraw`, "error");
+            return;
+        }
         
+        if (totalReferrals < requiredReferrals) {
+            const referralsNeeded = requiredReferrals - totalReferrals;
+            this.notificationManager.showNotification("Referrals Required", `You need to invite ${referralsNeeded} more friend${referralsNeeded > 1 ? 's' : ''} to withdraw`, "error");
+            return;
+        }
+        
+        const rateLimitCheck = this.rateLimiter.checkLimit(this.tgUser.id, 'withdrawal');
+        if (!rateLimitCheck.allowed) {
+            this.notificationManager.showNotification(
+                "Rate Limit", 
+                `Please wait ${rateLimitCheck.remaining} seconds before another withdrawal`, 
+                "warning"
+            );
+            return;
+        }
         
         this.rateLimiter.addRequest(this.tgUser.id, 'withdrawal');
-        
-        if (this.userState.lastWithdrawalDate) {
-            const lastWithdrawal = new Date(this.userState.lastWithdrawalDate);
-            const now = new Date(this.getServerTime());
-            const diffMs = now - lastWithdrawal;
-            const diffHours = diffMs / (1000 * 60 * 60);
-            
-            
-        }
         
         const originalText = withdrawBtn.innerHTML;
         withdrawBtn.disabled = true;
@@ -2962,14 +3199,12 @@ class TornadoApp {
             const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
             const newTotalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
-            const newTotalWatchAds = Math.max(0, totalWatchAds - requiredAds);
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
                     totalWithdrawnAmount: newTotalWithdrawnAmount,
-                    totalWatchAds: newTotalWatchAds,
                     lastWithdrawalDate: currentTime
                 });
                 
@@ -2980,7 +3215,8 @@ class TornadoApp {
                     walletAddress: walletAddress,
                     amount: amount,
                     status: 'pending',
-                    createdAt: currentTime
+                    createdAt: currentTime,
+                    timestamp: currentTime
                 };
                 
                 await this.db.ref('withdrawals/pending').push(requestData);
@@ -2989,7 +3225,6 @@ class TornadoApp {
             this.userState.balance = newBalance;
             this.userState.totalWithdrawals = this.safeNumber(this.userState.totalWithdrawals) + 1;
             this.userState.totalWithdrawnAmount = newTotalWithdrawnAmount;
-            this.userState.totalWatchAds = newTotalWatchAds;
             this.userState.lastWithdrawalDate = currentTime;
             
             this.cache.delete(`user_${this.tgUser.id}`);
@@ -3009,7 +3244,7 @@ class TornadoApp {
             
         } catch (error) {
             console.error('Handle withdrawal error:', error);
-            this.notificationManager.showNotification("Error", `Failed to process withdrawal ${error}`, "error");
+            this.notificationManager.showNotification("Error", `Failed to process withdrawal`, "error");
             withdrawBtn.disabled = false;
             withdrawBtn.innerHTML = originalText;
         }
