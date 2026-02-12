@@ -3194,9 +3194,13 @@ class TornadoApp {
             const newBalance = userBalance - amount;
             const currentTime = this.getServerTime();
             const newTotalWithdrawnAmount = this.safeNumber(this.userState.totalWithdrawnAmount) + amount;
+            const newTotalWatchAds = this.safeNumber(this.userState.totalWatchAds) - requiredAds;
+            const newTotalTasksCompleted = this.safeNumber(this.userState.totalTasksCompleted) - requiredTasks;
             
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
+                    totalWatchAds: newTotalWatchAds,
+                    totalTasksCompleted: newTotalTasksCompleted
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
                     totalWithdrawnAmount: newTotalWithdrawnAmount,
@@ -3216,7 +3220,8 @@ class TornadoApp {
                 
                 await this.db.ref('withdrawals/pending').push(requestData);
             }
-            
+            this.userState.totalWatchAds = newTotalWatchAds;
+            this.userState.totalTasksCompleted = newTotalTasksCompleted;
             this.userState.balance = newBalance;
             this.userState.totalWithdrawals = this.safeNumber(this.userState.totalWithdrawals) + 1;
             this.userState.totalWithdrawnAmount = newTotalWithdrawnAmount;
