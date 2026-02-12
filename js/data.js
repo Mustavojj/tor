@@ -1,16 +1,17 @@
 export const APP_CONFIG = {
     APP_NAME: "Tornado",
     BOT_USERNAME: "Tornado_Rbot",
-    BOT_TOKEN_ENCRYPTED: "7881276129:AAFHNV32ghfj--x6Estc2wrlOSuRu34NG8s",
     MINIMUM_WITHDRAW: 0.20,
     REFERRAL_BONUS_TON: 0.02,
-    REFERRAL_PERCENTAGE: 10,
+    REFERRAL_PERCENTAGE: 0,
     REFERRAL_BONUS_TASKS: 0,
     TASK_REWARD_BONUS: 0,
     MAX_DAILY_ADS: 50,
     AD_COOLDOWN: 180000,
     WATCH_AD_REWARD: 0.001,
     REQUIRED_ADS_FOR_WITHDRAWAL: 5,
+    REQUIRED_TASKS_FOR_WITHDRAWAL: 10,
+    REQUIRED_REFERRALS_FOR_WITHDRAWAL: 1,
     DEFAULT_USER_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
     BOT_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
     WELCOME_TASKS: [
@@ -28,7 +29,7 @@ export const APP_CONFIG = {
             name: "Join Crypto Al",
             url: "https://t.me/Crypto_al2",
             channel: "@Crypto_al2"
-                }
+        }
     ]
 };
 
@@ -50,7 +51,7 @@ export const CORE_CONFIG = {
 export const FEATURES_CONFIG = {
     TASK_VERIFICATION_DELAY: 10,
     REFERRAL_BONUS_TON: 0.02,
-    REFERRAL_PERCENTAGE: 10,
+    REFERRAL_PERCENTAGE: 0,
     REFERRALS_PER_PAGE: 10,
     PARTNER_TASK_REWARD: 0.001,
     SOCIAL_TASK_REWARD: 0.001
