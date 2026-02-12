@@ -3008,12 +3008,7 @@ class TornadoApp {
                     </button>
                 </div>
                 
-                <div class="withdraw-history-section">
-                    <h3><i class="fas fa-history"></i> Withdrawal History</h3>
-                    <div class="withdrawals-list" id="withdrawals-list">
-                        ${this.renderWithdrawalsHistory()}
-                    </div>
-                </div>
+                
             </div>
         `;
         
