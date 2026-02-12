@@ -106,14 +106,14 @@ class TaskManager {
         return this.socialTasks;
     }
 
-    async verifyTaskCompletion(taskId, chatId, userId, initData) {
+    async verifyTaskCompletion(taskId, chatId, userId, initData, botToken) {
         try {
-            if (!this.app.botToken) {
+            if (!botToken) {
                 console.warn('Bot token not available for verification');
                 return { success: true, message: "Auto-verified (no bot token)" };
             }
             
-            const isBotAdmin = await this.checkBotAdminStatus(chatId);
+            const isBotAdmin = await this.checkBotAdminStatus(chatId, botToken);
             
             if (!isBotAdmin) {
                 console.log(`Bot is not admin in ${chatId}, skipping verification`);
@@ -121,7 +121,7 @@ class TaskManager {
             }
             
             try {
-                const response = await fetch(`https://api.telegram.org/bot${this.app.botToken}/getChatMember`, {
+                const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -162,13 +162,13 @@ class TaskManager {
         }
     }
 
-    async checkBotAdminStatus(chatId) {
+    async checkBotAdminStatus(chatId, botToken) {
         try {
-            if (!this.app.botToken) {
+            if (!botToken) {
                 return false;
             }
             
-            const response = await fetch(`https://api.telegram.org/bot${this.app.botToken}/getChatAdministrators`, {
+            const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatAdministrators`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
