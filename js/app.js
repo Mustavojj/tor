@@ -3200,7 +3200,7 @@ class TornadoApp {
             if (this.db) {
                 await this.db.ref(`users/${this.tgUser.id}`).update({
                     totalWatchAds: newTotalWatchAds,
-                    totalTasksCompleted: newTotalTasksCompleted
+                    totalTasksCompleted: newTotalTasksCompleted, 
                     balance: newBalance,
                     totalWithdrawals: this.safeNumber(this.userState.totalWithdrawals) + 1,
                     totalWithdrawnAmount: newTotalWithdrawnAmount,
