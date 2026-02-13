@@ -225,6 +225,135 @@ class TaskManager {
     }
 }
 
+class WalletManager {
+    constructor(app) {
+        this.app = app;
+    }
+
+    validateWalletAddress(address) {
+        if (!address || typeof address !== 'string') {
+            return { valid: false, error: "Wallet address is required" };
+        }
+        
+        address = address.trim();
+        
+        if (address.length < APP_CONFIG.WALLET_VALIDATION.MIN_LENGTH) {
+            return { valid: false, error: `Wallet address must be at least ${APP_CONFIG.WALLET_VALIDATION.MIN_LENGTH} characters` };
+        }
+        
+        if (!address.startsWith(APP_CONFIG.WALLET_VALIDATION.PREFIX)) {
+            return { valid: false, error: `Wallet address must start with ${APP_CONFIG.WALLET_VALIDATION.PREFIX}` };
+        }
+        
+        return { valid: true, error: null };
+    }
+
+    validatePassword(password) {
+        if (!password || typeof password !== 'string') {
+            return { valid: false, error: "Password is required", details: [] };
+        }
+        
+        const errors = [];
+        const details = [];
+        
+        if (password.length < APP_CONFIG.WALLET_VALIDATION.PASSWORD_MIN_LENGTH) {
+            errors.push(`Password must be at least ${APP_CONFIG.WALLET_VALIDATION.PASSWORD_MIN_LENGTH} characters`);
+        }
+        
+        if (password.length > APP_CONFIG.WALLET_VALIDATION.PASSWORD_MAX_LENGTH) {
+            errors.push(`Password must be at most ${APP_CONFIG.WALLET_VALIDATION.PASSWORD_MAX_LENGTH} characters`);
+        }
+        
+        if (APP_CONFIG.WALLET_VALIDATION.REQUIRE_CAPITAL && !/[A-Z]/.test(password)) {
+            errors.push("Password must contain at least one capital letter");
+            details.push("capital");
+        }
+        
+        if (APP_CONFIG.WALLET_VALIDATION.REQUIRE_SYMBOL && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+            errors.push("Password must contain at least one symbol");
+            details.push("symbol");
+        }
+        
+        if (APP_CONFIG.WALLET_VALIDATION.REQUIRE_NUMBER && !/[0-9]/.test(password)) {
+            errors.push("Password must contain at least one number");
+            details.push("number");
+        }
+        
+        return {
+            valid: errors.length === 0,
+            error: errors.length > 0 ? errors[0] : null,
+            errors: errors,
+            details: details
+        };
+    }
+
+    async checkWalletExists(walletAddress) {
+        try {
+            if (!this.app.db) return false;
+            
+            const registryRef = this.app.db.ref(`walletRegistry/${walletAddress}`);
+            const snapshot = await registryRef.once('value');
+            
+            return snapshot.exists();
+        } catch (error) {
+            console.error('Error checking wallet existence:', error);
+            return false;
+        }
+    }
+
+    async registerWallet(walletAddress, userId) {
+        try {
+            if (!this.app.db) return false;
+            
+            await this.app.db.ref(`walletRegistry/${walletAddress}`).set({
+                userId: userId,
+                registeredAt: this.app.getServerTime()
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('Error registering wallet:', error);
+            return false;
+        }
+    }
+
+    async saveWalletData(walletAddress, password) {
+        try {
+            if (!this.app.db || !this.app.tgUser) return false;
+            
+            const userId = this.app.tgUser.id;
+            const currentTime = this.app.getServerTime();
+            
+            await this.app.db.ref(`users/${userId}`).update({
+                Wallet: walletAddress,
+                Password: password,
+                hasWallet: true,
+                hasPassword: true,
+                walletSetupAt: currentTime
+            });
+            
+            await this.registerWallet(walletAddress, userId);
+            
+            this.app.userState.Wallet = walletAddress;
+            this.app.userState.Password = password;
+            this.app.userState.hasWallet = true;
+            this.app.userState.hasPassword = true;
+            
+            this.app.cache.delete(`user_${userId}`);
+            
+            return true;
+        } catch (error) {
+            console.error('Error saving wallet data:', error);
+            return false;
+        }
+    }
+
+    verifyPassword(inputPassword, storedPassword) {
+        if (!inputPassword || !storedPassword) return false;
+        return inputPassword === storedPassword;
+    }
+}
+
 class QuestManager {
     constructor(app) {
         this.app = app;
@@ -365,4 +494,4 @@ class ReferralManager {
     }
 }
 
-export { TaskManager, QuestManager, ReferralManager };
+export { TaskManager, WalletManager, QuestManager, ReferralManager };
