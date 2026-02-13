@@ -833,6 +833,15 @@ async loadUserData(forceRefresh = false) {
             protectedFields.forEach(field => delete userData[field]);
             
             userData = await this.updateExistingUser(userRef, userData);
+            const walletSnap = await this.db.ref(`users/${telegramId}/Wallet`).once('value');
+const passSnap = await this.db.ref(`users/${telegramId}/Password`).once('value');
+const hasWalletSnap = await this.db.ref(`users/${telegramId}/hasWallet`).once('value');
+const hasPassSnap = await this.db.ref(`users/${telegramId}/hasPassword`).once('value');
+
+userData.Wallet = walletSnap.val();
+userData.Password = passSnap.val();
+userData.hasWallet = hasWalletSnap.val() || false;
+userData.hasPassword = hasPassSnap.val() || false;
         } else {
             userData = await this.createNewUser(userRef);
         }
