@@ -316,12 +316,6 @@ class TornadoApp {
             
             this.showLoadingProgress(75);
             
-            try {
-                await this.loadHistoryData();
-            } catch (historyError) {
-                console.warn('History loading error:', historyError);
-            }
-            
             this.showLoadingProgress(80);
             
             try {
@@ -378,14 +372,12 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                if (this.userState.hasWallet && this.userState.hasPassword) {
-                    if (!this.userState.welcomeTasksCompleted) {
-                        this.showWelcomeTasksModal();
-                    } else {
-                        this.showPage('tasks-page');
-                    }
-                } else {
+                if (!this.userState.withdrawal_account_status) {
                     this.showWithdrawalAccountSetup();
+                } else if (!this.userState.welcomeTasksCompleted) {
+                    this.showWelcomeTasksModal();
+                } else {
+                    this.showPage('tasks-page');
                 }
                 
             }, 500);
@@ -427,54 +419,54 @@ class TornadoApp {
         modal.id = 'withdrawal-account-modal';
         
         modal.innerHTML = `
-    <div class="withdrawal-account-content">
-        <div class="withdrawal-header">
-            <h3>Withdrawal Account</h3>
-        </div>
-        
-        <div class="withdrawal-form">
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-credit-card"></i> Wallet Address
-                </label>
-                <input type="text" id="wallet-address-input" class="form-input" 
-                       placeholder="Enter Your TON Wallet" 
-                       maxlength="48" autocomplete="off">
-                <div class="wallet-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>You cannot edit it again!</span>
+            <div class="withdrawal-account-content">
+                <div class="withdrawal-header">
+                    <h3>Withdrawal Account</h3>
+                </div>
+                
+                <div class="withdrawal-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-credit-card"></i> Wallet Address
+                        </label>
+                        <input type="text" id="wallet-address-input" class="form-input" 
+                               placeholder="Enter Your TON Wallet" 
+                               maxlength="48" autocomplete="off">
+                        <div class="wallet-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>You cannot edit it again!</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="wallet-password-input" class="form-input" 
+                               placeholder="Enter Withdrawal Password" 
+                               maxlength="16" autocomplete="new-password">
+                    </div>
+                    
+                    <button class="confirm-wallet-btn" id="confirm-wallet-btn">
+                        <i class="fas fa-check-circle"></i> Confirm Details
+                    </button>
+                    
+                    <div class="password-requirements" id="password-requirements">
+                        <h4>Password must include:</h4>
+                        <ul>
+                            <li id="req-capital"><i class="far fa-circle"></i> At least one capital letter</li>
+                            <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
+                            <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
+                        </ul>
+                        <div class="warning-message">
+                            ⚠️ This data cannot be modified later!
+                        </div>
+                    </div>
+                    
+                    <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-lock"></i> Password
-                </label>
-                <input type="password" id="wallet-password-input" class="form-input" 
-                       placeholder="Enter Withdrawal Password" 
-                       maxlength="16" autocomplete="new-password">
-            </div>
-            
-            <button class="confirm-wallet-btn" id="confirm-wallet-btn">
-                <i class="fas fa-check-circle"></i> Confirm Details
-            </button>
-            
-            <div class="password-requirements" id="password-requirements">
-                <h4>Password must include:</h4>
-                <ul>
-                    <li id="req-capital"><i class="far fa-circle"></i> At least one capital letter</li>
-                    <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
-                    <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
-                </ul>
-                <div class="warning-message">
-                     This data cannot be modified later!
-                </div>
-            </div>
-            
-            <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
-        </div>
-    </div>
-`;
+        `;
         
         document.body.appendChild(modal);
         
@@ -555,14 +547,22 @@ class TornadoApp {
                 const success = await this.walletManager.saveWalletData(wallet, password);
                 
                 if (success) {
-                    this.hasWallet = true;
-                    this.hasPassword = true;
-                    this.walletAddress = wallet;
-                    this.walletPassword = password;
+                    await this.db.ref(`users/${this.tgUser.id}`).update({
+                        withdrawal_account_status: true
+                    });
+                    
+                    this.userState.withdrawal_account_status = true;
                     this.userState.Wallet = wallet;
                     this.userState.Password = password;
                     this.userState.hasWallet = true;
                     this.userState.hasPassword = true;
+                    
+                    this.hasWallet = true;
+                    this.hasPassword = true;
+                    this.walletAddress = wallet;
+                    this.walletPassword = password;
+                    
+                    this.cache.set(`user_${this.tgUser.id}`, this.userState, 60000);
                     
                     confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed!';
                     confirmBtn.classList.add('confirmed');
@@ -773,8 +773,7 @@ class TornadoApp {
                     createdAt: this.getServerTime(),
                     lastSynced: this.getServerTime(),
                     isNewUser: true,
-                    hasWallet: false,
-                    hasPassword: false
+                    withdrawal_account_status: false
                 };
                 
                 await userRef.set(userData);
@@ -790,100 +789,81 @@ class TornadoApp {
         }
     }
 
-async loadUserData(forceRefresh = false) {
-    const cacheKey = `user_${this.tgUser.id}`;
-    
-    if (!forceRefresh) {
-        const cachedData = this.cache.get(cacheKey);
-        if (cachedData) {
-            this.userState = cachedData;
-            this.hasWallet = cachedData.hasWallet || false;
-            this.hasPassword = cachedData.hasPassword || false;
-            this.walletAddress = cachedData.Wallet || null;
-            this.walletPassword = cachedData.Password || null;
-            this.updateHeader();
-            return;
+    async loadUserData(forceRefresh = false) {
+        const cacheKey = `user_${this.tgUser.id}`;
+        
+        if (!forceRefresh) {
+            const cachedData = this.cache.get(cacheKey);
+            if (cachedData) {
+                this.userState = cachedData;
+                this.hasWallet = cachedData.hasWallet || false;
+                this.hasPassword = cachedData.hasPassword || false;
+                this.walletAddress = cachedData.Wallet || null;
+                this.walletPassword = cachedData.Password || null;
+                this.updateHeader();
+                return;
+            }
         }
-    }
-    
-    try {
-        if (!this.db || !this.firebaseInitialized || !this.auth?.currentUser) {
+        
+        try {
+            if (!this.db || !this.firebaseInitialized || !this.auth?.currentUser) {
+                this.userState = this.getDefaultUserState();
+                this.updateHeader();
+                
+                if (this.auth && !this.auth.currentUser) {
+                    setTimeout(() => {
+                        this.initializeFirebase();
+                    }, 2000);
+                }
+                
+                return;
+            }
+            
+            const telegramId = this.tgUser.id;
+            
+            const userRef = this.db.ref(`users/${telegramId}`);
+            const userSnapshot = await userRef.once('value');
+            
+            let userData;
+            
+            if (userSnapshot.exists()) {
+                userData = userSnapshot.val();
+                userData = await this.updateExistingUser(userRef, userData);
+            } else {
+                userData = await this.createNewUser(userRef);
+            }
+            
+            if (userData.firebaseUid !== this.auth.currentUser.uid) {
+                await userRef.update({
+                    firebaseUid: this.auth.currentUser.uid,
+                    lastUpdated: this.getServerTime()
+                });
+                userData.firebaseUid = this.auth.currentUser.uid;
+            }
+            
+            this.userState = userData;
+            this.userCompletedTasks = new Set(userData.completedTasks || []);
+            this.todayAds = userData.todayAds || 0;
+            this.hasWallet = userData.hasWallet || false;
+            this.hasPassword = userData.hasPassword || false;
+            this.walletAddress = userData.Wallet || null;
+            this.walletPassword = userData.Password || null;
+            
+            this.cache.set(cacheKey, userData, 60000);
+            this.updateHeader();
+            
+        } catch (error) {
+            console.error('Load user data error:', error);
             this.userState = this.getDefaultUserState();
             this.updateHeader();
             
-            if (this.auth && !this.auth.currentUser) {
-                setTimeout(() => {
-                    this.initializeFirebase();
-                }, 2000);
-            }
-            
-            return;
+            this.notificationManager?.showNotification(
+                "Data Sync Error",
+                "Using local data. Will sync when connection improves.",
+                "warning"
+            );
         }
-        
-        const telegramId = this.tgUser.id;
-        const userRef = this.db.ref(`users/${telegramId}`);
-        const userSnapshot = await userRef.once('value');
-        
-        let userData;
-        
-        if (userSnapshot.exists()) {
-            userData = userSnapshot.val();
-            
-            const protectedFields = ['Wallet', 'Password', 'hasWallet', 'hasPassword'];
-            protectedFields.forEach(field => delete userData[field]);
-            
-            userData = await this.updateExistingUser(userRef, userData);
-            const walletSnap = await this.db.ref(`users/${telegramId}/Wallet`).once('value');
-const passSnap = await this.db.ref(`users/${telegramId}/Password`).once('value');
-const hasWalletSnap = await this.db.ref(`users/${telegramId}/hasWallet`).once('value');
-const hasPassSnap = await this.db.ref(`users/${telegramId}/hasPassword`).once('value');
-
-userData.Wallet = walletSnap.val();
-userData.Password = passSnap.val();
-userData.hasWallet = hasWalletSnap.val() || false;
-userData.hasPassword = hasPassSnap.val() || false;
-        } else {
-            userData = await this.createNewUser(userRef);
-        }
-        
-        if (userData.firebaseUid !== this.auth.currentUser.uid) {
-            await userRef.update({
-                firebaseUid: this.auth.currentUser.uid,
-                lastUpdated: this.getServerTime()
-            });
-            userData.firebaseUid = this.auth.currentUser.uid;
-        }
-        
-        if (this.userState.Wallet && this.userState.Password) {
-            userData.Wallet = this.userState.Wallet;
-            userData.Password = this.userState.Password;
-            userData.hasWallet = this.userState.hasWallet;
-            userData.hasPassword = this.userState.hasPassword;
-        }
-        
-        this.userState = userData;
-        this.userCompletedTasks = new Set(userData.completedTasks || []);
-        this.todayAds = userData.todayAds || 0;
-        this.hasWallet = userData.hasWallet || false;
-        this.hasPassword = userData.hasPassword || false;
-        this.walletAddress = userData.Wallet || null;
-        this.walletPassword = userData.Password || null;
-        
-        this.cache.set(cacheKey, userData, 60000);
-        this.updateHeader();
-        
-    } catch (error) {
-        console.error('Load user data error:', error);
-        this.userState = this.getDefaultUserState();
-        this.updateHeader();
-        
-        this.notificationManager?.showNotification(
-            "Data Sync Error",
-            "Using local data. Will sync when connection improves.",
-            "warning"
-        );
     }
-}
 
     getDefaultUserState() {
         return {
@@ -917,7 +897,8 @@ userData.hasPassword = hasPassSnap.val() || false;
             hasWallet: false,
             hasPassword: false,
             Wallet: null,
-            Password: null
+            Password: null,
+            withdrawal_account_status: false
         };
     }
 
@@ -997,7 +978,8 @@ userData.hasPassword = hasPassSnap.val() || false;
             hasWallet: false,
             hasPassword: false,
             Wallet: null,
-            Password: null
+            Password: null,
+            withdrawal_account_status: false
         };
         
         await userRef.set(userData);
@@ -1165,7 +1147,8 @@ userData.hasPassword = hasPassSnap.val() || false;
             lastAdResetDate: userData.lastAdResetDate || today,
             theme: userData.theme || 'dark',
             hasWallet: userData.hasWallet || false,
-            hasPassword: userData.hasPassword || false
+            hasPassword: userData.hasPassword || false,
+            withdrawal_account_status: userData.withdrawal_account_status || false
         };
         
         Object.keys(defaultData).forEach(key => {
@@ -1320,39 +1303,6 @@ userData.hasPassword = hasPassSnap.val() || false;
         } catch (error) {
             console.warn('Load tasks data error:', error);
             return [];
-        }
-    }
-
-    async loadHistoryData() {
-        try {
-            if (!this.db) {
-                this.userWithdrawals = [];
-                return;
-            }
-            
-            const statuses = ['pending', 'completed', 'rejected'];
-            const withdrawalPromises = statuses.map(status => 
-                this.db.ref(`withdrawals/${status}`).orderByChild('userId').equalTo(this.tgUser.id).once('value')
-            );
-            
-            const withdrawalSnapshots = await Promise.all(withdrawalPromises);
-            this.userWithdrawals = [];
-            
-            withdrawalSnapshots.forEach(snap => {
-                snap.forEach(child => {
-                    this.userWithdrawals.push({ 
-                        id: child.key, 
-                        ...child.val(),
-                        transactionLink: child.val().transactionLink || null
-                    });
-                });
-            });
-            
-            this.userWithdrawals.sort((a, b) => (b.createdAt || b.timestamp) - (a.createdAt || a.timestamp));
-            
-        } catch (error) {
-            console.warn('Load history data error:', error);
-            this.userWithdrawals = [];
         }
     }
 
@@ -3139,7 +3089,6 @@ userData.hasPassword = hasPassSnap.val() || false;
         
         const maxBalance = this.safeNumber(this.userState.balance);
         const walletAddress = this.userState.Wallet || 'Not set';
-        const hasWalletSetup = this.userState.hasWallet && this.userState.Wallet;
         
         profilePage.innerHTML = `
             <div class="profile-container">
@@ -3271,13 +3220,6 @@ userData.hasPassword = hasPassSnap.val() || false;
                         ${canWithdraw ? 'WITHDRAW NOW' : this.getWithdrawButtonText(adsProgress, tasksProgress, referralsProgress)}
                     </button>
                 </div>
-                
-                <div class="withdraw-history-section">
-                    <h3><i class="fas fa-history"></i> Withdrawal History</h3>
-                    <div class="withdrawals-list" id="withdrawals-list">
-                        ${this.renderWithdrawalsHistory()}
-                    </div>
-                </div>
             </div>
         `;
         
@@ -3301,43 +3243,6 @@ userData.hasPassword = hasPassSnap.val() || false;
         return 'WITHDRAW NOW';
     }
 
-    renderWithdrawalsHistory() {
-        if (!this.userWithdrawals || this.userWithdrawals.length === 0) {
-            return `
-                <div class="no-data">
-                    <i class="fas fa-history"></i>
-                    <p>No withdrawal history</p>
-                    <p class="hint">Your withdrawals will appear here</p>
-                </div>
-            `;
-        }
-        
-        return this.userWithdrawals.map(withdrawal => `
-            <div class="withdrawal-item">
-                <div class="withdrawal-header">
-                    <span class="withdrawal-amount">${withdrawal.amount?.toFixed(5)} TON</span>
-                    <span class="withdrawal-status ${withdrawal.status}">${withdrawal.status.toUpperCase()}</span>
-                </div>
-                <div class="withdrawal-details">
-                    <div class="withdrawal-detail">
-                        <i class="fas fa-wallet"></i>
-                        <span class="withdrawal-wallet">${this.truncateAddress(withdrawal.walletAddress)}</span>
-                    </div>
-                    <div class="withdrawal-detail">
-                        <i class="fas fa-clock"></i>
-                        <span>${this.formatDateTime(withdrawal.createdAt || withdrawal.timestamp)}</span>
-                    </div>
-                    ${withdrawal.status === 'completed' && withdrawal.transactionLink ? `
-                        <div class="withdrawal-detail">
-                            <i class="fas fa-link"></i>
-                            <a href="${withdrawal.transactionLink}" target="_blank" class="transaction-link">View Transaction</a>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `).join('');
-    }
-
     truncateAddress(address) {
         if (!address || address === 'Not set') return 'Not set';
         if (address.length <= 15) return address;
@@ -3352,6 +3257,14 @@ userData.hasPassword = hasPassSnap.val() || false;
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
         return `${day}.${month}.${year} ${hours}:${minutes}`;
+    }
+
+    formatDate(timestamp) {
+        const date = new Date(timestamp);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
     }
 
     setupProfilePageEvents() {
@@ -3372,7 +3285,7 @@ userData.hasPassword = hasPassSnap.val() || false;
             withdrawBtn.addEventListener('click', async () => {
                 const password = passwordInput ? passwordInput.value : '';
                 
-                if (!this.walletManager.verifyPassword(password, this.userState.Password)) {
+                if (password !== this.userState.Password) {
                     if (errorDiv) {
                         errorDiv.style.display = 'block';
                         errorDiv.textContent = 'Incorrect Password!';
@@ -3527,8 +3440,6 @@ userData.hasPassword = hasPassSnap.val() || false;
             await this.updateAppStats('totalWithdrawals', 1);
             await this.updateAppStats('totalPayments', amount);
             
-            await this.loadHistoryData();
-            
             amountInput.value = '';
             const passwordInput = document.getElementById('profile-password-input');
             if (passwordInput) passwordInput.value = '';
@@ -3562,21 +3473,6 @@ userData.hasPassword = hasPassSnap.val() || false;
                 this.isCopying = false;
             }, 1000);
         });
-    }
-
-    formatDate(timestamp) {
-        const date = new Date(timestamp);
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}-${month}-${year}`;
-    }
-
-    formatTime24(timestamp) {
-        const date = new Date(timestamp);
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
     }
 
     setupEventListeners() {
