@@ -427,9 +427,6 @@ class TornadoApp {
         modal.innerHTML = `
     <div class="withdrawal-account-content">
         <div class="withdrawal-header">
-            <div class="withdrawal-icon">
-                
-            </div>
             <h3>Withdrawal Account</h3>
         </div>
         
@@ -468,8 +465,7 @@ class TornadoApp {
                     <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
                 </ul>
                 <div class="warning-message">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>This data cannot be modified later!</span>
+                     This data cannot be modified later!
                 </div>
             </div>
             
