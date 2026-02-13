@@ -425,59 +425,58 @@ class TornadoApp {
         modal.id = 'withdrawal-account-modal';
         
         modal.innerHTML = `
-            <div class="withdrawal-account-content">
-                <div class="withdrawal-header">
-                    <div class="withdrawal-icon">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                    <h3>Withdrawal Account</h3>
-                    <p>Setup your withdrawal account</p>
-                </div>
-                
-                <div class="withdrawal-form">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-credit-card"></i> Wallet Address
-                        </label>
-                        <input type="text" id="wallet-address-input" class="form-input" 
-                               placeholder="Enter Your TON Wallet" 
-                               maxlength="48" autocomplete="off">
-                        <div class="wallet-warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>You cannot edit it again!</span>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-lock"></i> Password
-                        </label>
-                        <input type="password" id="wallet-password-input" class="form-input" 
-                               placeholder="Enter Withdrawal Password" 
-                               maxlength="16" autocomplete="new-password">
-                    </div>
-                    
-                    <button class="confirm-wallet-btn" id="confirm-wallet-btn">
-                        <i class="fas fa-check-circle"></i> Confirm Details
-                    </button>
-                    
-                    <div class="password-requirements" id="password-requirements">
-                        <h4>Password must include:</h4>
-                        <ul>
-                            <li id="req-capital"><i class="far fa-circle"></i> At least one capital letter</li>
-                            <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
-                            <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
-                        </ul>
-                        <div class="warning-message">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>⚠️ This data cannot be modified later!</span>
-                        </div>
-                    </div>
-                    
-                    <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
+    <div class="withdrawal-account-content">
+        <div class="withdrawal-header">
+            <div class="withdrawal-icon">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <h3>Withdrawal Account</h3>
+        </div>
+        
+        <div class="withdrawal-form">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-credit-card"></i> Wallet Address
+                </label>
+                <input type="text" id="wallet-address-input" class="form-input" 
+                       placeholder="Enter Your TON Wallet" 
+                       maxlength="48" autocomplete="off">
+                <div class="wallet-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>You cannot edit it again!</span>
                 </div>
             </div>
-        `;
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" id="wallet-password-input" class="form-input" 
+                       placeholder="Enter Withdrawal Password" 
+                       maxlength="16" autocomplete="new-password">
+            </div>
+            
+            <button class="confirm-wallet-btn" id="confirm-wallet-btn">
+                <i class="fas fa-check-circle"></i> Confirm Details
+            </button>
+            
+            <div class="password-requirements" id="password-requirements">
+                <h4>Password must include:</h4>
+                <ul>
+                    <li id="req-capital"><i class="far fa-circle"></i> At least one capital letter</li>
+                    <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
+                    <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
+                </ul>
+                <div class="warning-message">
+                    <i class="fas fa-shield-alt"></i>
+                    <spanThis data cannot be modified later!</span>
+                </div>
+            </div>
+            
+            <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
+        </div>
+    </div>
+`;
         
         document.body.appendChild(modal);
         
