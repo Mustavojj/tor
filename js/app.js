@@ -793,81 +793,91 @@ class TornadoApp {
         }
     }
 
-    async loadUserData(forceRefresh = false) {
-        const cacheKey = `user_${this.tgUser.id}`;
-        
-        if (!forceRefresh) {
-            const cachedData = this.cache.get(cacheKey);
-            if (cachedData) {
-                this.userState = cachedData;
-                this.hasWallet = cachedData.hasWallet || false;
-                this.hasPassword = cachedData.hasPassword || false;
-                this.walletAddress = cachedData.Wallet || null;
-                this.walletPassword = cachedData.Password || null;
-                this.updateHeader();
-                return;
-            }
-        }
-        
-        try {
-            if (!this.db || !this.firebaseInitialized || !this.auth?.currentUser) {
-                this.userState = this.getDefaultUserState();
-                this.updateHeader();
-                
-                if (this.auth && !this.auth.currentUser) {
-                    setTimeout(() => {
-                        this.initializeFirebase();
-                    }, 2000);
-                }
-                
-                return;
-            }
-            
-            const telegramId = this.tgUser.id;
-            
-            const userRef = this.db.ref(`users/${telegramId}`);
-            const userSnapshot = await userRef.once('value');
-            
-            let userData;
-            
-            if (userSnapshot.exists()) {
-                userData = userSnapshot.val();
-                userData = await this.updateExistingUser(userRef, userData);
-            } else {
-                userData = await this.createNewUser(userRef);
-            }
-            
-            if (userData.firebaseUid !== this.auth.currentUser.uid) {
-                await userRef.update({
-                    firebaseUid: this.auth.currentUser.uid,
-                    lastUpdated: this.getServerTime()
-                });
-                userData.firebaseUid = this.auth.currentUser.uid;
-            }
-            
-            this.userState = userData;
-            this.userCompletedTasks = new Set(userData.completedTasks || []);
-            this.todayAds = userData.todayAds || 0;
-            this.hasWallet = userData.hasWallet || false;
-            this.hasPassword = userData.hasPassword || false;
-            this.walletAddress = userData.Wallet || null;
-            this.walletPassword = userData.Password || null;
-            
-            this.cache.set(cacheKey, userData, 60000);
+async loadUserData(forceRefresh = false) {
+    const cacheKey = `user_${this.tgUser.id}`;
+    
+    if (!forceRefresh) {
+        const cachedData = this.cache.get(cacheKey);
+        if (cachedData) {
+            this.userState = cachedData;
+            this.hasWallet = cachedData.hasWallet || false;
+            this.hasPassword = cachedData.hasPassword || false;
+            this.walletAddress = cachedData.Wallet || null;
+            this.walletPassword = cachedData.Password || null;
             this.updateHeader();
-            
-        } catch (error) {
-            console.error('Load user data error:', error);
+            return;
+        }
+    }
+    
+    try {
+        if (!this.db || !this.firebaseInitialized || !this.auth?.currentUser) {
             this.userState = this.getDefaultUserState();
             this.updateHeader();
             
-            this.notificationManager?.showNotification(
-                "Data Sync Error",
-                "Using local data. Will sync when connection improves.",
-                "warning"
-            );
+            if (this.auth && !this.auth.currentUser) {
+                setTimeout(() => {
+                    this.initializeFirebase();
+                }, 2000);
+            }
+            
+            return;
         }
+        
+        const telegramId = this.tgUser.id;
+        const userRef = this.db.ref(`users/${telegramId}`);
+        const userSnapshot = await userRef.once('value');
+        
+        let userData;
+        
+        if (userSnapshot.exists()) {
+            userData = userSnapshot.val();
+            
+            const protectedFields = ['Wallet', 'Password', 'hasWallet', 'hasPassword'];
+            protectedFields.forEach(field => delete userData[field]);
+            
+            userData = await this.updateExistingUser(userRef, userData);
+        } else {
+            userData = await this.createNewUser(userRef);
+        }
+        
+        if (userData.firebaseUid !== this.auth.currentUser.uid) {
+            await userRef.update({
+                firebaseUid: this.auth.currentUser.uid,
+                lastUpdated: this.getServerTime()
+            });
+            userData.firebaseUid = this.auth.currentUser.uid;
+        }
+        
+        if (this.userState.Wallet && this.userState.Password) {
+            userData.Wallet = this.userState.Wallet;
+            userData.Password = this.userState.Password;
+            userData.hasWallet = this.userState.hasWallet;
+            userData.hasPassword = this.userState.hasPassword;
+        }
+        
+        this.userState = userData;
+        this.userCompletedTasks = new Set(userData.completedTasks || []);
+        this.todayAds = userData.todayAds || 0;
+        this.hasWallet = userData.hasWallet || false;
+        this.hasPassword = userData.hasPassword || false;
+        this.walletAddress = userData.Wallet || null;
+        this.walletPassword = userData.Password || null;
+        
+        this.cache.set(cacheKey, userData, 60000);
+        this.updateHeader();
+        
+    } catch (error) {
+        console.error('Load user data error:', error);
+        this.userState = this.getDefaultUserState();
+        this.updateHeader();
+        
+        this.notificationManager?.showNotification(
+            "Data Sync Error",
+            "Using local data. Will sync when connection improves.",
+            "warning"
+        );
     }
+}
 
     getDefaultUserState() {
         return {
