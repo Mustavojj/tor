@@ -428,7 +428,7 @@ class TornadoApp {
     <div class="withdrawal-account-content">
         <div class="withdrawal-header">
             <div class="withdrawal-icon">
-                <i class="fas fa-wallet"></i>
+                
             </div>
             <h3>Withdrawal Account</h3>
         </div>
@@ -469,7 +469,7 @@ class TornadoApp {
                 </ul>
                 <div class="warning-message">
                     <i class="fas fa-shield-alt"></i>
-                    <spanThis data cannot be modified later!</span>
+                    <span>This data cannot be modified later!</span>
                 </div>
             </div>
             
