@@ -1,6 +1,6 @@
 import { APP_CONFIG, THEME_CONFIG } from './data.js';
 import { CacheManager, NotificationManager, SecurityManager, AdManager } from './modules/core.js';
-import { TaskManager, QuestManager, ReferralManager } from './modules/features.js';
+import { TaskManager, WalletManager, QuestManager, ReferralManager } from './modules/features.js';
 
 class TornadoApp {
     
@@ -43,6 +43,7 @@ class TornadoApp {
         this.tgUser = null;
         
         this.taskManager = null;
+        this.walletManager = null;
         this.questManager = null;
         this.referralManager = null;
         
@@ -84,6 +85,13 @@ class TornadoApp {
         this.themeToggleBtn = null;
         
         this.botToken = null;
+        
+        this.hasWallet = false;
+        this.hasPassword = false;
+        this.walletAddress = null;
+        this.walletPassword = null;
+        this.walletSetupError = null;
+        this.welcomeTasksError = null;
     }
 
     async getBotToken() {
@@ -292,6 +300,7 @@ class TornadoApp {
             
             this.adManager = new AdManager(this);
             this.taskManager = new TaskManager(this);
+            this.walletManager = new WalletManager(this);
             this.questManager = new QuestManager(this);
             this.referralManager = new ReferralManager(this);
             
@@ -369,7 +378,9 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                if (!this.userState.welcomeTasksCompleted) {
+                if (!this.userState.hasWallet || !this.userState.hasPassword) {
+                    this.showWithdrawalAccountSetup();
+                } else if (!this.userState.welcomeTasksCompleted) {
                     this.showWelcomeTasksModal();
                 } else {
                     this.showPage('tasks-page');
@@ -404,6 +415,185 @@ class TornadoApp {
             
             this.isInitializing = false;
         }
+    }
+
+    async showWithdrawalAccountSetup() {
+        this.walletSetupError = null;
+        
+        const modal = document.createElement('div');
+        modal.className = 'withdrawal-account-modal';
+        modal.id = 'withdrawal-account-modal';
+        
+        modal.innerHTML = `
+            <div class="withdrawal-account-content">
+                <div class="withdrawal-header">
+                    <div class="withdrawal-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <h3>Withdrawal Account</h3>
+                    <p>Setup your withdrawal account</p>
+                </div>
+                
+                <div class="withdrawal-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-credit-card"></i> Wallet Address
+                        </label>
+                        <input type="text" id="wallet-address-input" class="form-input" 
+                               placeholder="Enter Your TON Wallet" 
+                               maxlength="48" autocomplete="off">
+                        <div class="wallet-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>You cannot edit it again!</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="wallet-password-input" class="form-input" 
+                               placeholder="Enter Withdrawal Password" 
+                               maxlength="16" autocomplete="new-password">
+                    </div>
+                    
+                    <button class="confirm-wallet-btn" id="confirm-wallet-btn">
+                        <i class="fas fa-check-circle"></i> Confirm Details
+                    </button>
+                    
+                    <div class="password-requirements" id="password-requirements">
+                        <h4>Password must include:</h4>
+                        <ul>
+                            <li id="req-capital"><i class="far fa-circle"></i> At least one capital letter</li>
+                            <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
+                            <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
+                        </ul>
+                        <div class="warning-message">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>⚠️ This data cannot be modified later!</span>
+                        </div>
+                    </div>
+                    
+                    <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const walletInput = document.getElementById('wallet-address-input');
+        const passwordInput = document.getElementById('wallet-password-input');
+        const confirmBtn = document.getElementById('confirm-wallet-btn');
+        const errorDiv = document.getElementById('wallet-error-message');
+        
+        const checkPasswordStrength = () => {
+            const password = passwordInput.value;
+            const reqCapital = document.getElementById('req-capital');
+            const reqSymbol = document.getElementById('req-symbol');
+            const reqNumber = document.getElementById('req-number');
+            
+            if (!password) {
+                reqCapital.innerHTML = '<i class="far fa-circle"></i> At least one capital letter';
+                reqSymbol.innerHTML = '<i class="far fa-circle"></i> At least one symbol (@#$&..)';
+                reqNumber.innerHTML = '<i class="far fa-circle"></i> At least one number';
+                return;
+            }
+            
+            if (/[A-Z]/.test(password)) {
+                reqCapital.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i> At least one capital letter';
+            } else {
+                reqCapital.innerHTML = '<i class="far fa-circle"></i> At least one capital letter';
+            }
+            
+            if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+                reqSymbol.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i> At least one symbol (@#$&..)';
+            } else {
+                reqSymbol.innerHTML = '<i class="far fa-circle"></i> At least one symbol (@#$&..)';
+            }
+            
+            if (/[0-9]/.test(password)) {
+                reqNumber.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i> At least one number';
+            } else {
+                reqNumber.innerHTML = '<i class="far fa-circle"></i> At least one number';
+            }
+        };
+        
+        passwordInput.addEventListener('input', checkPasswordStrength);
+        
+        confirmBtn.addEventListener('click', async () => {
+            const wallet = walletInput.value.trim();
+            const password = passwordInput.value;
+            
+            const walletValidation = this.walletManager.validateWalletAddress(wallet);
+            if (!walletValidation.valid) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = walletValidation.error;
+                errorDiv.className = 'wallet-error-message error';
+                return;
+            }
+            
+            const passwordValidation = this.walletManager.validatePassword(password);
+            if (!passwordValidation.valid) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = passwordValidation.error;
+                errorDiv.className = 'wallet-error-message error';
+                return;
+            }
+            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            
+            try {
+                const walletExists = await this.walletManager.checkWalletExists(wallet);
+                
+                if (walletExists) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = 'Wallet has already been assigned to another user.';
+                    errorDiv.className = 'wallet-error-message error';
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Details';
+                    return;
+                }
+                
+                const success = await this.walletManager.saveWalletData(wallet, password);
+                
+                if (success) {
+                    this.hasWallet = true;
+                    this.hasPassword = true;
+                    this.walletAddress = wallet;
+                    this.walletPassword = password;
+                    this.userState.Wallet = wallet;
+                    this.userState.Password = password;
+                    this.userState.hasWallet = true;
+                    this.userState.hasPassword = true;
+                    
+                    confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed!';
+                    confirmBtn.classList.add('confirmed');
+                    
+                    setTimeout(() => {
+                        modal.remove();
+                        
+                        if (!this.userState.welcomeTasksCompleted) {
+                            this.showWelcomeTasksModal();
+                        } else {
+                            this.showPage('tasks-page');
+                        }
+                    }, 1500);
+                } else {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = 'Failed to save wallet data. Please try again.';
+                    errorDiv.className = 'wallet-error-message error';
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Details';
+                }
+            } catch (error) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.className = 'wallet-error-message error';
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Details';
+            }
+        });
     }
 
     async checkAndResetDailyAds() {
@@ -585,7 +775,9 @@ class TornadoApp {
                     telegramId: telegramId,
                     createdAt: this.getServerTime(),
                     lastSynced: this.getServerTime(),
-                    isNewUser: true
+                    isNewUser: true,
+                    hasWallet: false,
+                    hasPassword: false
                 };
                 
                 await userRef.set(userData);
@@ -608,6 +800,10 @@ class TornadoApp {
             const cachedData = this.cache.get(cacheKey);
             if (cachedData) {
                 this.userState = cachedData;
+                this.hasWallet = cachedData.hasWallet || false;
+                this.hasPassword = cachedData.hasPassword || false;
+                this.walletAddress = cachedData.Wallet || null;
+                this.walletPassword = cachedData.Password || null;
                 this.updateHeader();
                 return;
             }
@@ -652,6 +848,10 @@ class TornadoApp {
             this.userState = userData;
             this.userCompletedTasks = new Set(userData.completedTasks || []);
             this.todayAds = userData.todayAds || 0;
+            this.hasWallet = userData.hasWallet || false;
+            this.hasPassword = userData.hasPassword || false;
+            this.walletAddress = userData.Wallet || null;
+            this.walletPassword = userData.Password || null;
             
             this.cache.set(cacheKey, userData, 60000);
             this.updateHeader();
@@ -697,7 +897,11 @@ class TornadoApp {
             theme: 'dark',
             completedTasks: [],
             todayAds: 0,
-            lastAdResetDate: new Date().toDateString()
+            lastAdResetDate: new Date().toDateString(),
+            hasWallet: false,
+            hasPassword: false,
+            Wallet: null,
+            Password: null
         };
     }
 
@@ -773,7 +977,11 @@ class TornadoApp {
             totalWatchAds: 0,
             todayAds: 0,
             lastAdResetDate: today,
-            theme: 'dark'
+            theme: 'dark',
+            hasWallet: false,
+            hasPassword: false,
+            Wallet: null,
+            Password: null
         };
         
         await userRef.set(userData);
@@ -899,11 +1107,15 @@ class TornadoApp {
         const currentTime = this.getServerTime();
         const today = new Date().toDateString();
         
-        await userRef.update({ 
+        const updates = {
             lastActive: currentTime,
             username: this.tgUser.username ? `@${this.tgUser.username}` : 'No Username',
             firstName: userData.firstName || this.getShortName(this.tgUser.first_name || 'User')
-        });
+        };
+        
+        if (userData.username !== updates.username || userData.firstName !== updates.firstName) {
+            await userRef.update(updates);
+        }
         
         if (userData.completedTasks && Array.isArray(userData.completedTasks)) {
             this.userCompletedTasks = new Set(userData.completedTasks);
@@ -935,10 +1147,11 @@ class TornadoApp {
             totalWatchAds: userData.totalWatchAds || 0,
             todayAds: userData.todayAds || 0,
             lastAdResetDate: userData.lastAdResetDate || today,
-            theme: userData.theme || 'dark'
+            theme: userData.theme || 'dark',
+            hasWallet: userData.hasWallet || false,
+            hasPassword: userData.hasPassword || false
         };
         
-        const updates = {};
         Object.keys(defaultData).forEach(key => {
             if (userData[key] === undefined) {
                 updates[key] = defaultData[key];
@@ -1204,8 +1417,11 @@ class TornadoApp {
             return;
         }
         
+        this.welcomeTasksError = null;
+        
         const modal = document.createElement('div');
         modal.className = 'welcome-tasks-modal';
+        modal.id = 'welcome-tasks-modal';
         
         const welcomeTasksHTML = this.appConfig.WELCOME_TASKS.map((task, index) => `
             <div class="welcome-task-item" id="welcome-task-${index}">
@@ -1241,6 +1457,7 @@ class TornadoApp {
                     <p>
                         <i class="fas fa-info-circle"></i> Join all ${this.appConfig.WELCOME_TASKS.length} channels then click CHECK
                     </p>
+                    <div class="welcome-error-message" id="welcome-error-message" style="display: none;"></div>
                 </div>
             </div>
         `;
@@ -1284,14 +1501,23 @@ class TornadoApp {
                                 btn.classList.add('completed');
                                 clickedTasks[index] = true;
                                 updateCheckButton();
+                                
+                                const errorDiv = document.getElementById('welcome-error-message');
+                                if (errorDiv) {
+                                    errorDiv.style.display = 'none';
+                                    app.welcomeTasksError = null;
+                                }
                             } else {
                                 btn.innerHTML = '<i class="fas fa-external-link-alt"></i> Join';
                                 btn.disabled = false;
-                                app.notificationManager.showNotification(
-                                    "Not a Member", 
-                                    `Please join ${task.name} first`, 
-                                    "warning"
-                                );
+                                
+                                const errorDiv = document.getElementById('welcome-error-message');
+                                if (errorDiv) {
+                                    errorDiv.style.display = 'block';
+                                    errorDiv.textContent = `Please join ${task.name} first`;
+                                    errorDiv.className = 'welcome-error-message error';
+                                    app.welcomeTasksError = `Please join ${task.name} first`;
+                                }
                             }
                         } else {
                             btn.innerHTML = '<i class="fas fa-check"></i> Verified';
@@ -1312,6 +1538,8 @@ class TornadoApp {
                 checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
                 checkBtn.disabled = true;
                 
+                const errorDiv = document.getElementById('welcome-error-message');
+                
                 try {
                     const verificationResult = await app.verifyWelcomeTasks();
                     
@@ -1321,7 +1549,7 @@ class TornadoApp {
                         app.showPage('tasks-page');
                         app.notificationManager.showNotification("Success", "Welcome bonus received!", "success");
                     } else {
-                        checkBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check & Get 0.01 TON';
+                        checkBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check & Get 0.005 TON';
                         checkBtn.disabled = false;
                         
                         if (verificationResult.missing.length > 0) {
@@ -1330,15 +1558,21 @@ class TornadoApp {
                                 return task ? task.name : item;
                             }).join(', ');
                             
-                            app.notificationManager.showNotification(
-                                "Verification Failed", 
-                                `Please join: ${missingItems}`, 
-                                "error"
-                            );
+                            if (errorDiv) {
+                                errorDiv.style.display = 'block';
+                                errorDiv.textContent = `Please join: ${missingItems}`;
+                                errorDiv.className = 'welcome-error-message error';
+                                app.welcomeTasksError = `Please join: ${missingItems}`;
+                            }
                         }
                     }
                 } catch (error) {
-                    app.notificationManager.showNotification("Error", "Failed to verify tasks", "error");
+                    if (errorDiv) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = 'Failed to verify tasks';
+                        errorDiv.className = 'welcome-error-message error';
+                        app.welcomeTasksError = 'Failed to verify tasks';
+                    }
                     checkBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check & Get 0.005 TON';
                     checkBtn.disabled = false;
                 }
@@ -2888,6 +3122,8 @@ class TornadoApp {
                            totalReferrals >= requiredReferrals;
         
         const maxBalance = this.safeNumber(this.userState.balance);
+        const walletAddress = this.userState.Wallet || 'Not set';
+        const hasWalletSetup = this.userState.hasWallet && this.userState.Wallet;
         
         profilePage.innerHTML = `
             <div class="profile-container">
@@ -2941,6 +3177,16 @@ class TornadoApp {
                         <h3><i class="fas fa-wallet"></i> Withdraw TON</h3>
                     </div>
                     
+                    <div class="wallet-info-display">
+                        <div class="wallet-info-item">
+                            <span class="wallet-label"><i class="fas fa-credit-card"></i> TON Wallet:</span>
+                            <span class="wallet-value">${this.truncateAddress(walletAddress)}</span>
+                        </div>
+                        <div class="wallet-info-note">
+                            <i class="fas fa-lock"></i> Fixed address (cannot be changed)
+                        </div>
+                    </div>
+                    
                     <div class="requirements-section">
                         <div class="requirement-item">
                             <div class="requirement-header">
@@ -2974,12 +3220,12 @@ class TornadoApp {
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label" for="profile-wallet-input">
-                            <i class="fas fa-wallet"></i> TON Wallet Address
+                        <label class="form-label" for="profile-password-input">
+                            <i class="fas fa-lock"></i> Withdrawal Password
                         </label>
-                        <input type="text" id="profile-wallet-input" class="form-input" 
-                               placeholder="Enter your TON wallet address (UQ...)"
-                               required>
+                        <input type="password" id="profile-password-input" class="form-input" 
+                               placeholder="Enter your withdrawal password"
+                               maxlength="16" autocomplete="off">
                     </div>
                     
                     <div class="form-group amount-group">
@@ -3001,6 +3247,8 @@ class TornadoApp {
                         <span>Minimum Withdrawal: <strong>${this.appConfig.MINIMUM_WITHDRAW.toFixed(3)} TON</strong></span>
                     </div>
                     
+                    <div class="password-error-message" id="password-error-message" style="display: none;"></div>
+                    
                     <button id="profile-withdraw-btn" class="withdraw-btn" 
                             ${!canWithdraw || maxBalance < this.appConfig.MINIMUM_WITHDRAW ? 'disabled' : ''}>
                         <i class="fas fa-paper-plane"></i> 
@@ -3008,7 +3256,12 @@ class TornadoApp {
                     </button>
                 </div>
                 
-                
+                <div class="withdraw-history-section">
+                    <h3><i class="fas fa-history"></i> Withdrawal History</h3>
+                    <div class="withdrawals-list" id="withdrawals-list">
+                        ${this.renderWithdrawalsHistory()}
+                    </div>
+                </div>
             </div>
         `;
         
@@ -3070,9 +3323,9 @@ class TornadoApp {
     }
 
     truncateAddress(address) {
-        if (!address) return 'N/A';
+        if (!address || address === 'Not set') return 'Not set';
         if (address.length <= 15) return address;
-        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        return address.substring(0, 8) + '...' + address.substring(address.length - 4);
     }
 
     formatDateTime(timestamp) {
@@ -3087,9 +3340,10 @@ class TornadoApp {
 
     setupProfilePageEvents() {
         const withdrawBtn = document.getElementById('profile-withdraw-btn');
-        const walletInput = document.getElementById('profile-wallet-input');
+        const passwordInput = document.getElementById('profile-password-input');
         const amountInput = document.getElementById('profile-amount-input');
         const maxBtn = document.getElementById('max-btn');
+        const errorDiv = document.getElementById('password-error-message');
         
         if (maxBtn) {
             maxBtn.addEventListener('click', () => {
@@ -3100,7 +3354,22 @@ class TornadoApp {
         
         if (withdrawBtn) {
             withdrawBtn.addEventListener('click', async () => {
-                await this.handleProfileWithdrawal(walletInput, amountInput, withdrawBtn);
+                const password = passwordInput ? passwordInput.value : '';
+                
+                if (!this.walletManager.verifyPassword(password, this.userState.Password)) {
+                    if (errorDiv) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = 'Incorrect Password!';
+                        errorDiv.className = 'password-error-message error';
+                    }
+                    return;
+                }
+                
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+                
+                await this.handleProfileWithdrawal(amountInput, withdrawBtn);
             });
         }
         
@@ -3114,12 +3383,20 @@ class TornadoApp {
                 }
             });
         }
+        
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                const errorDiv = document.getElementById('password-error-message');
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+            });
+        }
     }
     
-    async handleProfileWithdrawal(walletInput, amountInput, withdrawBtn) {
-        if (!walletInput || !amountInput || !withdrawBtn) return;
+    async handleProfileWithdrawal(amountInput, withdrawBtn) {
+        if (!amountInput || !withdrawBtn) return;
         
-        const walletAddress = walletInput.value.trim();
         const amount = parseFloat(amountInput.value);
         const userBalance = this.safeNumber(this.userState.balance);
         const minimumWithdraw = this.appConfig.MINIMUM_WITHDRAW;
@@ -3129,9 +3406,10 @@ class TornadoApp {
         const requiredTasks = this.appConfig.REQUIRED_TASKS_FOR_WITHDRAWAL;
         const totalReferrals = this.safeNumber(this.userState.referrals || 0);
         const requiredReferrals = this.appConfig.REQUIRED_REFERRALS_FOR_WITHDRAWAL;
+        const walletAddress = this.userState.Wallet;
         
-        if (!walletAddress || walletAddress.length < 20) {
-            this.notificationManager.showNotification("Error", "Please enter a valid TON wallet address", "error");
+        if (!walletAddress || walletAddress === 'Not set') {
+            this.notificationManager.showNotification("Error", "No wallet address configured", "error");
             return;
         }
         
@@ -3220,6 +3498,7 @@ class TornadoApp {
                 
                 await this.db.ref('withdrawals/pending').push(requestData);
             }
+            
             this.userState.totalWatchAds = newTotalWatchAds;
             this.userState.totalTasksCompleted = newTotalTasksCompleted;
             this.userState.balance = newBalance;
@@ -3234,8 +3513,9 @@ class TornadoApp {
             
             await this.loadHistoryData();
             
-            walletInput.value = '';
             amountInput.value = '';
+            const passwordInput = document.getElementById('profile-password-input');
+            if (passwordInput) passwordInput.value = '';
             
             this.updateHeader();
             this.renderProfilePage();
