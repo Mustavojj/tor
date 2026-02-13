@@ -1227,7 +1227,6 @@ class TornadoApp {
                         <i class="fas fa-gift"></i>
                     </div>
                     <h3>Welcome Tasks</h3>
-                    <p>Join all channels to claim your bonus</p>
                 </div>
                 
                 <div class="welcome-tasks-list">
