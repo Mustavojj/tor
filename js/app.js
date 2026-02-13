@@ -1236,11 +1236,9 @@ class TornadoApp {
                 
                 <div class="welcome-footer">
                     <button class="check-welcome-btn" id="check-welcome-btn" disabled>
-                        <i class="fas fa-check-circle"></i> Check & Get 0.005 TON
+                        <i class="fas fa-check-circle"></i> Check & Get 0.01 TON
                     </button>
-                    <p>
-                        <i class="fas fa-info-circle"></i> Join all ${this.appConfig.WELCOME_TASKS.length} channels then click CHECK
-                    </p>
+                    
                 </div>
             </div>
         `;
