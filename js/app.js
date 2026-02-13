@@ -458,9 +458,7 @@ class TornadoApp {
                             <li id="req-symbol"><i class="far fa-circle"></i> At least one symbol (@#$&..)</li>
                             <li id="req-number"><i class="far fa-circle"></i> At least one number</li>
                         </ul>
-                        <div class="warning-message">
-                            ⚠️ This data cannot be modified later!
-                        </div>
+                        
                     </div>
                     
                     <div class="wallet-error-message" id="wallet-error-message" style="display: none;"></div>
