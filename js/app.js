@@ -378,12 +378,14 @@ class TornadoApp {
                 
                 this.initializeInAppAds();
                 
-                if (!this.userState.hasWallet || !this.userState.hasPassword) {
-                    this.showWithdrawalAccountSetup();
-                } else if (!this.userState.welcomeTasksCompleted) {
-                    this.showWelcomeTasksModal();
+                if (this.userState.hasWallet && this.userState.hasPassword) {
+                    if (!this.userState.welcomeTasksCompleted) {
+                        this.showWelcomeTasksModal();
+                    } else {
+                        this.showPage('tasks-page');
+                    }
                 } else {
-                    this.showPage('tasks-page');
+                    this.showWithdrawalAccountSetup();
                 }
                 
             }, 500);
