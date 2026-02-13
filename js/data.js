@@ -14,6 +14,15 @@ export const APP_CONFIG = {
     REQUIRED_REFERRALS_FOR_WITHDRAWAL: 1,
     DEFAULT_USER_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
     BOT_AVATAR: "https://i.ibb.co/gM8hnfwm/TORNADO-PIC.png",
+    WALLET_VALIDATION: {
+        MIN_LENGTH: 32,
+        PREFIX: "UQ",
+        PASSWORD_MIN_LENGTH: 8,
+        PASSWORD_MAX_LENGTH: 16,
+        REQUIRE_CAPITAL: true,
+        REQUIRE_SYMBOL: true,
+        REQUIRE_NUMBER: true
+    },
     WELCOME_TASKS: [
         {
             name: "Join Official Channel",
